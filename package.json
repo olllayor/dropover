@@ -1,0 +1,67 @@
+{
+  "name": "ledge-app",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.11.1",
+  "description": "Ledge is a macOS-only shelf utility built with Electron and Swift.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "pnpm brand:build && pnpm native:build && electron-vite dev",
+    "build": "pnpm brand:build && pnpm native:build && electron-vite build",
+    "preview": "pnpm brand:build && pnpm native:build && electron-vite preview",
+    "lint": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "test": "vitest run && pnpm native:test",
+    "test:watch": "vitest",
+    "brand:build": "node scripts/build-brand.mjs",
+    "native:build": "node scripts/build-native.mjs",
+    "native:test": "swift run --package-path native/DropShelfNativeAgent DropShelfNativeAgent --self-test",
+    "dist": "pnpm build && electron-builder"
+  },
+  "dependencies": {
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "25.5.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.2.0",
+    "electron": "41.1.0",
+    "electron-builder": "26.8.1",
+    "electron-vite": "5.0.0",
+    "typescript": "6.0.2",
+    "vite": "7.3.1",
+    "vitest": "4.1.2"
+  },
+  "build": {
+    "appId": "com.ollayor.ledge",
+    "productName": "Ledge",
+    "executableName": "Ledge",
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "native/bin/DropShelfNativeAgent",
+        "to": "native/DropShelfNativeAgent"
+      }
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "hardenedRuntime": true,
+      "extendInfo": {
+        "CFBundleDisplayName": "Ledge",
+        "CFBundleName": "Ledge"
+      }
+    }
+  }
+}

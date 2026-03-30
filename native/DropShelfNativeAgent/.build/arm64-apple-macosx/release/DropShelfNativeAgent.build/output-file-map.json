@@ -1,0 +1,31 @@
+{
+  "": {
+    "dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/DropShelfNativeAgent.d",
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/DropShelfNativeAgent.o",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/master.swiftdeps"
+  },
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/Protocol.swift": {
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/Protocol.swift.o",
+    "swiftmodule": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/Protocol~partial.swiftmodule",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/Protocol.swiftdeps",
+    "diagnostics": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/Protocol.dia"
+  },
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/SelfTest.swift": {
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/SelfTest.swift.o",
+    "swiftmodule": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/SelfTest~partial.swiftmodule",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/SelfTest.swiftdeps",
+    "diagnostics": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/SelfTest.dia"
+  },
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/ShakeDetector.swift": {
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/ShakeDetector.swift.o",
+    "swiftmodule": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/ShakeDetector~partial.swiftmodule",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/ShakeDetector.swiftdeps",
+    "diagnostics": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/ShakeDetector.dia"
+  },
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/main.swift": {
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/main.swift.o",
+    "swiftmodule": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/main~partial.swiftmodule",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/main.swiftdeps",
+    "diagnostics": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/release/DropShelfNativeAgent.build/main.dia"
+  }
+}

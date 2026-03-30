@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/master.swiftdeps"
+  },
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.derived/runner.swift": {
+    "dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/runner.d",
+    "object": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/runner.swift.o",
+    "swiftmodule": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/runner~partial.swiftmodule",
+    "swift-dependencies": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/runner.swiftdeps",
+    "diagnostics": "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgentPackageTests.build/runner.dia"
+  }
+}

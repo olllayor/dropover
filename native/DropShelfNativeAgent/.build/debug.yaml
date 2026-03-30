@@ -1,0 +1,81 @@
+client:
+  name: basic
+  file-system: device-agnostic
+tools: {}
+targets:
+  "DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe": ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe>"]
+  "DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module": ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module>"]
+  "PackageStructure": ["<PackageStructure>"]
+  "main": ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe>","<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module>"]
+  "test": ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe>","<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module>"]
+default: "main"
+nodes:
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/":
+    is-directory-structure: true
+    content-exclusion-patterns: [".git",".build"]
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent":
+    is-mutated: true
+commands:
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent-entitlement.plist":
+    tool: write-auxiliary-file
+    inputs: ["<entitlement-plist>","<com.apple.security.get-task-allow>"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent-entitlement.plist"]
+    description: "Write auxiliary file /Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent-entitlement.plist"
+
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/sources":
+    tool: write-auxiliary-file
+    inputs: ["<sources-file-list>","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/Protocol.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/SelfTest.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/ShakeDetector.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/main.swift"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/sources"]
+    description: "Write auxiliary file /Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/sources"
+
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.product/Objects.LinkFileList":
+    tool: write-auxiliary-file
+    inputs: ["<link-file-list>","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/Protocol.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/SelfTest.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/ShakeDetector.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/main.swift.o"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.product/Objects.LinkFileList"]
+    description: "Write auxiliary file /Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.product/Objects.LinkFileList"
+
+  "/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt":
+    tool: write-auxiliary-file
+    inputs: ["<swift-get-version>","/Library/Developer/CommandLineTools/usr/bin/swiftc"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"]
+    always-out-of-date: "true"
+    description: "Write auxiliary file /Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt"
+
+  "<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe>":
+    tool: phony
+    inputs: ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe-CodeSigning>"]
+    outputs: ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe>"]
+
+  "<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module>":
+    tool: phony
+    inputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/Protocol.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/SelfTest.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/ShakeDetector.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/main.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/Modules/DropShelfNativeAgent.swiftmodule"]
+    outputs: ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module>"]
+
+  "C.DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe":
+    tool: shell
+    inputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/Protocol.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/SelfTest.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/ShakeDetector.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/main.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.product/Objects.LinkFileList"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent"]
+    description: "Linking ./.build/arm64-apple-macosx/debug/DropShelfNativeAgent"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-L","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug","-o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent","-module-name","DropShelfNativeAgent","-Xlinker","-no_warn_duplicate_libraries","-emit-executable","-Xlinker","-alias","-Xlinker","_DropShelfNativeAgent_main","-Xlinker","_main","-Xlinker","-rpath","-Xlinker","@loader_path","@/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.product/Objects.LinkFileList","-Xlinker","-rpath","-Xlinker","/Library/Developer/CommandLineTools/usr/lib/swift-6.2/macosx","-target","arm64-apple-macosx12.0","-Xlinker","-add_ast_path","-Xlinker","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/Modules/DropShelfNativeAgent.swiftmodule","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g"]
+
+  "C.DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe-entitlements":
+    tool: shell
+    inputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent-entitlement.plist"]
+    outputs: ["<DropShelfNativeAgent-arm64-apple-macosx26.0-debug.exe-CodeSigning>"]
+    description: "Applying debug entitlements to ./.build/arm64-apple-macosx/debug/DropShelfNativeAgent"
+    args: ["codesign","--force","--sign","-","--entitlements","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent-entitlement.plist","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent"]
+
+  "C.DropShelfNativeAgent-arm64-apple-macosx26.0-debug.module":
+    tool: shell
+    inputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/Protocol.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/SelfTest.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/ShakeDetector.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/main.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/swift-version--1AB21518FC5DEDBE.txt","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/sources"]
+    outputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/Protocol.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/SelfTest.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/ShakeDetector.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/main.swift.o","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/Modules/DropShelfNativeAgent.swiftmodule"]
+    description: "Compiling Swift Module 'DropShelfNativeAgent' (4 sources)"
+    args: ["/Library/Developer/CommandLineTools/usr/bin/swiftc","-module-name","DropShelfNativeAgent","-emit-dependencies","-emit-module","-emit-module-path","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/Modules/DropShelfNativeAgent.swiftmodule","-output-file-map","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/output-file-map.json","-incremental","-c","@/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/DropShelfNativeAgent.build/sources","-I","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/Modules","-target","arm64-apple-macosx12.0","-incremental","-enable-batch-mode","-serialize-diagnostics","-index-store-path","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/index/store","-Onone","-enable-testing","-j8","-DSWIFT_PACKAGE","-DDEBUG","-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE","-module-cache-path","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/.build/arm64-apple-macosx/debug/ModuleCache","-parseable-output","-Xfrontend","-entry-point-function-name","-Xfrontend","DropShelfNativeAgent_main","-swift-version","5","-I","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-L","/Library/Developer/CommandLineTools/Library/Developer/Frameworks","-plugin-path","/Library/Developer/CommandLineTools/usr/lib/swift/host/plugins/testing","-sdk","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-g","-Xcc","-isysroot","-Xcc","/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk","-Xcc","-fPIC","-Xcc","-g","-package-name","dropshelfnativeagent"]
+
+  "PackageStructure":
+    tool: package-structure-tool
+    inputs: ["/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Sources/DropShelfNativeAgent/","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Package.swift","/Users/ollayor/Code/Projects/dropover/native/DropShelfNativeAgent/Package.resolved"]
+    outputs: ["<PackageStructure>"]
+    description: "Planning build"
+    allow-missing-inputs: true
+
