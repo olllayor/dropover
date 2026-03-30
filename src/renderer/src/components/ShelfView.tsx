@@ -10,10 +10,12 @@ export function ShelfView({ state }: ShelfViewProps) {
   const recentShelves = useDeferredValue(state.recentShelves)
   const [nameDraft, setNameDraft] = useState(liveShelf?.name ?? 'Untitled Shelf')
   const [isImporting, setIsImporting] = useState(false)
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const shareableCount =
     liveShelf?.items.filter(
       (item) => (item.kind === 'file' || item.kind === 'folder' || item.kind === 'imageAsset') && !item.file.isMissing
     ).length ?? 0
+  const primaryItem = liveShelf?.items[0] ?? null
   const shortcutLabel = !state.preferences.globalShortcut
     ? 'Shortcut off'
     : state.permissionStatus.shortcutRegistered
@@ -47,6 +49,12 @@ export function ShelfView({ state }: ShelfViewProps) {
   useEffect(() => {
     setNameDraft(liveShelf?.name ?? 'Untitled Shelf')
   }, [liveShelf?.id, liveShelf?.name])
+
+  useEffect(() => {
+    if ((liveShelf?.items.length ?? 0) <= 1) {
+      setDetailsOpen(false)
+    }
+  }, [liveShelf?.id, liveShelf?.items.length])
 
   async function pushPayloads(payloads: IngestPayload[]) {
     if (payloads.length === 0) {
@@ -106,64 +114,38 @@ export function ShelfView({ state }: ShelfViewProps) {
     <main className="shelf-shell" onPaste={handlePaste} tabIndex={0}>
       <section className="shelf-panel" onDragOver={(event) => event.preventDefault()} onDrop={handleDrop}>
         <header className="shelf-topbar">
+          <button className="chrome-button chrome-button-close" onClick={() => void window.dropover.closeShelf()} aria-label="Close shelf">
+            ×
+          </button>
           <div className="shelf-title-group">
             <div className="shelf-handle" />
-            <input
-              className="shelf-name compact"
-              value={nameDraft}
-              onChange={(event) => setNameDraft(event.target.value)}
-              onBlur={() => void window.dropover.renameShelf(nameDraft)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.currentTarget.blur()
-                }
-              }}
-            />
           </div>
-
-          <div className="toolbar-actions">
-            <button className="toolbar-button" onClick={() => void window.dropover.shareShelfItems()} disabled={shareableCount === 0}>
-              Share
-            </button>
-            <button className="toolbar-button" onClick={() => void window.dropover.clearShelf()} disabled={itemCount === 0}>
-              Clear
-            </button>
-            <button className="toolbar-button destructive" onClick={() => void window.dropover.closeShelf()}>
-              Close
-            </button>
-          </div>
+          <button
+            className="chrome-button"
+            onClick={() => setDetailsOpen((open) => !open)}
+            aria-label={detailsOpen ? 'Hide shelf details' : 'Show shelf details'}
+          >
+            {detailsOpen ? '⌃' : '⌄'}
+          </button>
         </header>
 
         <section className={`drop-surface compact ${itemCount === 0 ? 'is-empty' : ''}`}>
-          <div className="surface-headline">
-            <div>
-              <p className="surface-title compact">{itemCount === 0 ? 'Drop anything here' : `${itemCount} item${itemCount === 1 ? '' : 's'} on shelf`}</p>
-              <p className="surface-subtitle compact">
-                Files, folders, text, links, and pasted images. Unavailable files stay on the shelf until you remove them.
-              </p>
-            </div>
-            <div className="status-pill compact">{isImporting ? 'Importing' : liveShelf?.origin ?? 'standby'}</div>
-          </div>
-
           {itemCount === 0 ? (
             <div className="empty-state compact">
-              <p>Shake, use the tray, or trigger your shortcut to open a shelf near the cursor.</p>
-              <div className="meta-strip">
-                <span className="meta-chip">{shortcutLabel}</span>
-                <span className="meta-chip">{helperLabel}</span>
-              </div>
+              <p className="surface-title compact">Drop anything here</p>
+              <p className="surface-subtitle compact">A temporary shelf appears near the cursor while you drag.</p>
             </div>
+          ) : primaryItem ? (
+            <HeroItem
+              item={primaryItem}
+              totalItems={itemCount}
+              isImporting={isImporting}
+              helperLabel={helperLabel}
+              shortcutLabel={shortcutLabel}
+            />
           ) : (
-            <div className="item-list compact">
-              {liveShelf?.items.map((item, index) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  isFirst={index === 0}
-                  isLast={index === liveShelf.items.length - 1}
-                  onMove={moveItem}
-                />
-              ))}
+            <div className="empty-state compact">
+              <p className="surface-title compact">Shelf ready</p>
             </div>
           )}
         </section>
@@ -180,24 +162,62 @@ export function ShelfView({ state }: ShelfViewProps) {
           </section>
         ) : null}
 
-        <footer className="shelf-footer">
-          <div className="recent-inline">
-            {recentShelves.length === 0 ? (
-              <span className="footer-note">No recent shelves yet.</span>
-            ) : (
-              recentShelves.slice(0, 3).map((shelf) => (
-                <button key={shelf.id} className="recent-pill" onClick={() => void window.dropover.restoreShelf(shelf.id)}>
-                  {shelf.name} <span>{shelf.items.length}</span>
+        {detailsOpen ? (
+          <section className="shelf-drawer">
+            <div className="drawer-controls">
+              <input
+                className="shelf-name compact"
+                value={nameDraft}
+                onChange={(event) => setNameDraft(event.target.value)}
+                onBlur={() => void window.dropover.renameShelf(nameDraft)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.currentTarget.blur()
+                  }
+                }}
+              />
+              <div className="toolbar-actions">
+                <button className="toolbar-button" onClick={() => void window.dropover.shareShelfItems()} disabled={shareableCount === 0}>
+                  Share
                 </button>
-              ))
-            )}
-          </div>
+                <button className="toolbar-button" onClick={() => void window.dropover.clearShelf()} disabled={itemCount === 0}>
+                  Clear
+                </button>
+              </div>
+            </div>
 
-          <div className="footer-meta">
-            <span className="footer-note">Single live shelf</span>
-            <span className="footer-note">{state.preferences.excludedBundleIds.length} excluded apps</span>
-          </div>
-        </footer>
+            <div className="item-list compact">
+              {liveShelf?.items.map((item, index) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  isFirst={index === 0}
+                  isLast={index === liveShelf.items.length - 1}
+                  onMove={moveItem}
+                />
+              ))}
+            </div>
+
+            <footer className="shelf-footer">
+              <div className="recent-inline">
+                {recentShelves.length === 0 ? (
+                  <span className="footer-note">No recent shelves yet.</span>
+                ) : (
+                  recentShelves.slice(0, 3).map((shelf) => (
+                    <button key={shelf.id} className="recent-pill" onClick={() => void window.dropover.restoreShelf(shelf.id)}>
+                      {shelf.name} <span>{shelf.items.length}</span>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <div className="footer-meta">
+                <span className="footer-note">{liveShelf?.origin ?? 'standby'}</span>
+                <span className="footer-note">{state.preferences.excludedBundleIds.length} excluded apps</span>
+              </div>
+            </footer>
+          </section>
+        ) : null}
       </section>
     </main>
   )
@@ -289,6 +309,93 @@ function ItemCard({ item, isFirst, isLast, onMove }: ItemCardProps) {
   )
 }
 
+interface HeroItemProps {
+  item: ShelfItemRecord
+  totalItems: number
+  isImporting: boolean
+  helperLabel: string
+  shortcutLabel: string
+}
+
+function HeroItem({ item, totalItems, isImporting, helperLabel, shortcutLabel }: HeroItemProps) {
+  const fileBacked = item.kind === 'file' || item.kind === 'folder' || item.kind === 'imageAsset'
+  const missing = fileBacked && item.file.isMissing
+  const statusLabel = isImporting ? 'Importing' : missing ? 'Missing on disk' : totalItems > 1 ? `${totalItems} items` : 'Ready'
+  const previewSrc = getHeroPreviewSource(item)
+
+  return (
+    <div className="hero-item">
+      <div className="hero-stage">
+        {totalItems > 1 ? <span className="hero-count">{totalItems}</span> : null}
+        <div className={`hero-artwork ${missing ? 'is-missing' : ''}`}>
+          {previewSrc ? <img src={previewSrc} alt="" className="hero-image" /> : <HeroGlyph kind={item.kind} />}
+        </div>
+      </div>
+      <div className="hero-chip-row">
+        <div className="hero-chip" title={item.title}>
+          <span>{item.title}</span>
+          <span className="hero-chip-arrow">›</span>
+        </div>
+      </div>
+      <div className="meta-strip hero-meta">
+        <span className="meta-chip">{statusLabel}</span>
+        <span className="meta-chip">{helperLabel}</span>
+        <span className="meta-chip">{shortcutLabel}</span>
+      </div>
+    </div>
+  )
+}
+
+function HeroGlyph({ kind }: { kind: ShelfItemRecord['kind'] }) {
+  if (kind === 'folder') {
+    return (
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <path d="M16 28a10 10 0 0 1 10-10h16l8 8h20a10 10 0 0 1 10 10v28a12 12 0 0 1-12 12H24A12 12 0 0 1 12 64V28h4Z" fill="rgba(255,255,255,0.96)" />
+        <path d="M20 34h56a8 8 0 0 1 8 8v20a10 10 0 0 1-10 10H24A10 10 0 0 1 14 62V40a6 6 0 0 1 6-6Z" fill="rgba(230,232,235,0.95)" />
+      </svg>
+    )
+  }
+
+  if (kind === 'url') {
+    return (
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <path d="M38 58l20-20m-7-10h8a16 16 0 1 1 0 32h-8m-6 0h-8a16 16 0 0 1 0-32h8" fill="none" stroke="rgba(255,255,255,0.96)" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+
+  if (kind === 'text') {
+    return (
+      <svg viewBox="0 0 96 96" aria-hidden="true">
+        <path d="M28 16h30l18 18v42a8 8 0 0 1-8 8H28a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8Z" fill="rgba(255,255,255,0.96)" />
+        <path d="M58 16v18h18" fill="rgba(225,228,232,0.95)" />
+        <path d="M34 50h28M34 60h20" stroke="rgba(136,139,144,0.8)" strokeWidth="6" strokeLinecap="round" />
+      </svg>
+    )
+  }
+
+  return (
+    <svg viewBox="0 0 96 96" aria-hidden="true">
+      <path d="M28 14h30l18 18v40a10 10 0 0 1-10 10H28a10 10 0 0 1-10-10V24a10 10 0 0 1 10-10Z" fill="rgba(255,255,255,0.97)" />
+      <path d="M58 14v18a8 8 0 0 0 8 8h18" fill="rgba(224,226,230,0.95)" />
+      <path d="M34 56h24" stroke="rgba(206,210,216,0.9)" strokeWidth="6" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function getHeroPreviewSource(item: ShelfItemRecord): string | null {
+  if (item.kind !== 'imageAsset' && !(item.kind === 'file' && item.mimeType.startsWith('image/'))) {
+    return null
+  }
+
+  const path = item.file.resolvedPath || item.file.originalPath
+  if (!path || item.file.isMissing) {
+    return null
+  }
+
+  return `file://${encodeURI(path)}`
+}
+
 async function payloadsFromTransfer(transfer: DataTransfer): Promise<IngestPayload[]> {
   const payloads: IngestPayload[] = []
   const filePaths = Array.from(transfer.files)
@@ -304,17 +411,21 @@ async function payloadsFromTransfer(transfer: DataTransfer): Promise<IngestPaylo
 
   const imageItems = Array.from(transfer.items as DataTransferItemList).filter((item) => item.type.startsWith('image/'))
   for (const item of imageItems) {
-    const file = item.getAsFile()
-    if (!file) {
-      continue
-    }
+    try {
+      const file = item.getAsFile()
+      if (!file) {
+        continue
+      }
 
-    const maybePath = (file as File & { path?: string }).path
-    if (maybePath) {
-      continue
-    }
+      const maybePath = (file as File & { path?: string }).path
+      if (maybePath) {
+        continue
+      }
 
-    payloads.push(await imageToPayload(file))
+      payloads.push(await imageToPayload(file))
+    } catch {
+      // Skip malformed image transfer items and continue ingesting the rest of the payload.
+    }
   }
 
   if (payloads.length === 0) {

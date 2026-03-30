@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync } from 'node:fs'
+import { promises as fs } from 'node:fs'
 import { join } from 'node:path'
+import { z } from 'zod'
 import {
   appStateSchema,
   preferencesRecordSchema,
@@ -14,6 +16,10 @@ import {
 } from '@shared/schema'
 
 const persistedStateSchema = appStateSchema.omit({ permissionStatus: true })
+const persistedStateEnvelopeSchema = persistedStateSchema.extend({
+  version: z.literal(1)
+})
+const persistedStateVersion = 1
 
 interface PersistedState {
   liveShelf: ShelfRecord | null
@@ -21,11 +27,19 @@ interface PersistedState {
   preferences: PreferencesRecord
 }
 
+interface LoadResult {
+  state: PersistedState
+  needsMigration: boolean
+}
+
 export class StateStore {
   readonly assetsDir: string
   readonly exportsDir: string
   private readonly statePath: string
   private persisted: PersistedState
+  private pendingSerialized: string | null = null
+  private writeScheduled = false
+  private writeQueue = Promise.resolve()
 
   constructor(userDataDir: string) {
     this.assetsDir = join(userDataDir, 'assets')
@@ -34,7 +48,12 @@ export class StateStore {
     mkdirSync(userDataDir, { recursive: true })
     mkdirSync(this.assetsDir, { recursive: true })
     mkdirSync(this.exportsDir, { recursive: true })
-    this.persisted = this.load()
+    const loaded = this.load()
+    this.persisted = loaded.state
+
+    if (loaded.needsMigration) {
+      this.save()
+    }
   }
 
   snapshot(permissionStatus: PermissionStatus): AppState {
@@ -54,6 +73,10 @@ export class StateStore {
 
   getLiveShelf(): ShelfRecord | null {
     return this.persisted.liveShelf
+  }
+
+  whenIdle(): Promise<void> {
+    return this.writeQueue
   }
 
   createShelf(origin: ShelfOrigin): ShelfRecord {
@@ -199,21 +222,71 @@ export class StateStore {
     this.persisted.liveShelf = null
   }
 
-  private load(): PersistedState {
+  private load(): LoadResult {
     if (!existsSync(this.statePath)) {
-      return this.defaultState()
+      return {
+        state: this.defaultState(),
+        needsMigration: false
+      }
     }
 
     try {
       const raw = readFileSync(this.statePath, 'utf8')
-      return persistedStateSchema.parse(JSON.parse(raw))
+      const parsed = JSON.parse(raw)
+
+      if (parsed && typeof parsed === 'object' && 'version' in parsed) {
+        const envelope = persistedStateEnvelopeSchema.parse(parsed)
+        return {
+          state: {
+            liveShelf: envelope.liveShelf,
+            recentShelves: envelope.recentShelves,
+            preferences: envelope.preferences
+          },
+          needsMigration: false
+        }
+      }
+
+      return {
+        state: persistedStateSchema.parse(parsed),
+        needsMigration: true
+      }
     } catch {
-      return this.defaultState()
+      return {
+        state: this.defaultState(),
+        needsMigration: false
+      }
     }
   }
 
   private save(): void {
-    writeFileSync(this.statePath, JSON.stringify(this.persisted, null, 2))
+    this.pendingSerialized = JSON.stringify(
+      {
+        version: persistedStateVersion,
+        ...this.persisted
+      },
+      null,
+      2
+    )
+
+    if (this.writeScheduled) {
+      return
+    }
+
+    this.writeScheduled = true
+    this.writeQueue = this.writeQueue.then(async () => {
+      while (this.pendingSerialized !== null) {
+        const serialized = this.pendingSerialized
+        this.pendingSerialized = null
+
+        try {
+          await fs.writeFile(this.statePath, serialized, 'utf8')
+        } catch (error) {
+          console.error('Failed to persist Ledge state.', error)
+        }
+      }
+
+      this.writeScheduled = false
+    })
   }
 
   private defaultState(): PersistedState {

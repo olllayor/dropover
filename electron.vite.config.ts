@@ -4,8 +4,13 @@ import react from '@vitejs/plugin-react'
 
 const root = resolve(__dirname, '.')
 const shared = resolve(root, 'src/shared')
+const rendererCspByMode = {
+  serve:
+    "default-src 'self' http://localhost:* ws://localhost:*; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' http://localhost:* ws://localhost:*;",
+  build: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self';"
+} as const
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   main: {
     resolve: {
       alias: {
@@ -45,6 +50,15 @@ export default defineConfig({
     build: {
       outDir: '../../out/renderer'
     },
-    plugins: [react()]
+    plugins: [
+      react(),
+      {
+        name: 'inject-renderer-csp',
+        transformIndexHtml(html) {
+          const csp = rendererCspByMode[command === 'serve' ? 'serve' : 'build']
+          return html.replace('__APP_CSP__', csp)
+        }
+      }
+    ]
   }
-})
+}))

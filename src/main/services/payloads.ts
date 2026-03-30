@@ -180,7 +180,7 @@ async function createPathItem(path: string, order: number, context: PayloadConte
       detail: path
     },
     file,
-    mimeType: extension ? `application/${extension.toLowerCase()}` : 'application/octet-stream'
+    mimeType: lookupMimeType(path)
   }
 }
 
@@ -232,6 +232,15 @@ function mimeTypeToExtension(mimeType: string): string {
   }
 }
 
+function lookupMimeType(path: string): string {
+  const extension = extname(path).replace(/^\./, '').toLowerCase()
+  if (!extension) {
+    return 'application/octet-stream'
+  }
+
+  return MIME_TYPES_BY_EXTENSION[extension] ?? 'application/octet-stream'
+}
+
 function sanitizeFileName(name: string): string {
   return name.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'drop-image'
 }
@@ -268,4 +277,29 @@ function formatBytes(size: number): string {
   }
 
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[unitIndex]}`
+}
+
+const MIME_TYPES_BY_EXTENSION: Record<string, string> = {
+  aac: 'audio/aac',
+  csv: 'text/csv',
+  gif: 'image/gif',
+  heic: 'image/heic',
+  heif: 'image/heif',
+  html: 'text/html',
+  jpeg: 'image/jpeg',
+  jpg: 'image/jpeg',
+  json: 'application/json',
+  md: 'text/markdown',
+  mov: 'video/quicktime',
+  mp3: 'audio/mpeg',
+  mp4: 'video/mp4',
+  pdf: 'application/pdf',
+  png: 'image/png',
+  svg: 'image/svg+xml',
+  txt: 'text/plain',
+  wav: 'audio/wav',
+  webm: 'video/webm',
+  webp: 'image/webp',
+  xml: 'application/xml',
+  zip: 'application/zip'
 }

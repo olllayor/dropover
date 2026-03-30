@@ -40,6 +40,7 @@ describe('payloadToItems', () => {
       throw new Error('Expected file-backed item')
     }
     expect(getFileBackedPath(items[0])).toBe(filePath)
+    expect(items[0]?.kind === 'file' ? items[0].mimeType : '').toBe('text/plain')
   })
 
   it('imports pathless images into app storage', async () => {
@@ -95,6 +96,34 @@ describe('payloadToItems', () => {
 
     expect(items).toHaveLength(1)
     expect(items[0]?.kind).toBe('file')
+  })
+
+  it('uses known MIME types and falls back safely for unknown extensions', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dropshelf-mime-'))
+    tempDirs.push(dir)
+    const pdfPath = join(dir, 'sample.PDF')
+    const unknownPath = join(dir, 'archive.weirdext')
+    await writeFile(pdfPath, 'pdf')
+    await writeFile(unknownPath, 'unknown')
+
+    const items = await payloadToItems(
+      {
+        kind: 'fileDrop',
+        paths: [pdfPath, unknownPath]
+      },
+      {
+        assetsDir: dir,
+        createBookmark: async (path) => `bookmark:${path}`,
+        resolveBookmark: async (bookmarkBase64) => ({
+          resolvedPath: bookmarkBase64.replace('bookmark:', ''),
+          isStale: false,
+          isMissing: false
+        })
+      }
+    )
+
+    const fileItems = items.filter((item): item is Extract<(typeof items)[number], { kind: 'file' }> => item.kind === 'file')
+    expect(fileItems.map((item) => item.mimeType)).toEqual(['application/pdf', 'application/octet-stream'])
   })
 })
 

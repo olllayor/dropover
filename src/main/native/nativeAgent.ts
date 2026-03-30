@@ -47,12 +47,39 @@ type PendingRequest = {
   reject: (reason?: unknown) => void
 }
 
+interface NativeHelperProcess extends EventEmitter {
+  stdin: {
+    write(chunk: string): boolean
+  }
+  stdout: EventEmitter & {
+    setEncoding(encoding: BufferEncoding): void
+  }
+  stderr: EventEmitter
+}
+
+interface NativeAgentClientOptions {
+  spawnProcess?: (binaryPath: string) => NativeHelperProcess
+  resolveBinaryPath?: () => string | null
+  restartDelayMs?: number
+  maxRestartDelayMs?: number
+  scheduleTimeout?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
+}
+
 export class NativeAgentClient extends EventEmitter {
-  private child: ChildProcessWithoutNullStreams | null = null
+  private readonly spawnProcess: (binaryPath: string) => NativeHelperProcess
+  private readonly resolveBinaryPath: () => string | null
+  private readonly baseRestartDelayMs: number
+  private readonly maxRestartDelayMs: number
+  private readonly scheduleTimeout: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
+  private child: NativeHelperProcess | null = null
   private nextId = 1
   private stdoutBuffer = ''
   private readonly pending = new Map<number, PendingRequest>()
   private gestureEnabled = false
+  private lastPreferences: PreferencesRecord | null = null
+  private restartTimer: ReturnType<typeof setTimeout> | null = null
+  private nextRestartDelayMs: number
+  private shouldRestart = false
   private status: NativePermissionSnapshot = {
     nativeHelperAvailable: false,
     accessibilityTrusted: false,
@@ -60,8 +87,23 @@ export class NativeAgentClient extends EventEmitter {
     lastError: ''
   }
 
+  constructor(options: NativeAgentClientOptions = {}) {
+    super()
+    this.spawnProcess = options.spawnProcess ?? defaultSpawnProcess
+    this.resolveBinaryPath = options.resolveBinaryPath ?? resolveNativeBinary
+    this.baseRestartDelayMs = options.restartDelayMs ?? 250
+    this.maxRestartDelayMs = options.maxRestartDelayMs ?? 2_000
+    this.scheduleTimeout = options.scheduleTimeout ?? setTimeout
+    this.nextRestartDelayMs = this.baseRestartDelayMs
+  }
+
   async start(): Promise<void> {
-    const binaryPath = resolveNativeBinary()
+    this.shouldRestart = true
+    await this.launchHelper()
+  }
+
+  private async launchHelper(): Promise<void> {
+    const binaryPath = this.resolveBinaryPath()
 
     if (!binaryPath || !existsSync(binaryPath)) {
       this.updateStatus({
@@ -73,40 +115,57 @@ export class NativeAgentClient extends EventEmitter {
       return
     }
 
-    this.child = spawn(binaryPath, [], {
-      stdio: ['pipe', 'pipe', 'pipe']
-    })
+    const child = this.spawnProcess(binaryPath)
+    this.child = child
+    this.stdoutBuffer = ''
 
-    this.child.stdout.setEncoding('utf8')
-    this.child.stdout.on('data', (chunk) => this.consumeStdout(chunk))
-    this.child.stderr.on('data', (chunk) => {
-      this.updateStatus({
-        lastError: chunk.toString().trim()
-      })
+    child.stdout.setEncoding('utf8')
+    child.stdout.on('data', (chunk) => this.consumeStdout(String(chunk)))
+    child.stderr.on('data', (chunk) => {
+      const message = chunk.toString().trim()
+      if (message) {
+        this.updateStatus({
+          lastError: message
+        })
+      }
     })
-    this.child.on('exit', () => {
-      this.updateStatus({
-        nativeHelperAvailable: false,
-        accessibilityTrusted: false,
-        lastError: this.status.lastError || 'Native helper exited unexpectedly'
-      })
+    child.on('exit', () => {
+      this.handleChildUnavailable(child, this.status.lastError || 'Native helper exited unexpectedly')
     })
-    this.child.on('error', (error) => {
-      this.updateStatus({
-        nativeHelperAvailable: false,
-        accessibilityTrusted: false,
-        lastError: error.message
-      })
+    child.on('error', (error) => {
+      const message = error instanceof Error ? error.message : 'Native helper failed unexpectedly'
+      this.handleChildUnavailable(child, message)
     })
 
     this.updateStatus({
       nativeHelperAvailable: true,
       lastError: ''
     })
-    const permission = await this.getPermissions()
-    this.updateStatus({
-      accessibilityTrusted: permission.accessibilityTrusted
-    })
+
+    try {
+      const permission = await this.getPermissions()
+      if (child !== this.child) {
+        return
+      }
+
+      this.updateStatus({
+        accessibilityTrusted: permission.accessibilityTrusted
+      })
+
+      this.nextRestartDelayMs = this.baseRestartDelayMs
+
+      if (this.lastPreferences) {
+        await this.configureGesture(this.lastPreferences)
+      }
+    } catch (error) {
+      if (child !== this.child) {
+        return
+      }
+
+      this.updateStatus({
+        lastError: error instanceof Error ? error.message : 'Native helper failed during startup'
+      })
+    }
   }
 
   getStatus(): NativePermissionSnapshot {
@@ -133,31 +192,50 @@ export class NativeAgentClient extends EventEmitter {
       return false
     }
 
-    await this.call('permissions.openSettings')
-    return true
+    try {
+      await this.call('permissions.openSettings')
+      return true
+    } catch {
+      return false
+    }
   }
 
   async configureGesture(preferences: PreferencesRecord): Promise<void> {
+    this.lastPreferences = preferences
+    this.gestureEnabled = preferences.shakeEnabled
+
     if (!this.child) {
+      this.updateStatus({})
       return
     }
 
-    this.gestureEnabled = preferences.shakeEnabled
-    await this.call('gesture.start', {
-      enabled: preferences.shakeEnabled,
-      excludedBundleIds: preferences.excludedBundleIds,
-      sensitivity: preferences.shakeSensitivity
-    })
+    try {
+      await this.call('gesture.start', {
+        enabled: preferences.shakeEnabled,
+        excludedBundleIds: preferences.excludedBundleIds,
+        sensitivity: preferences.shakeSensitivity
+      })
+    } catch {
+      // The helper may be restarting. Preserve the desired preference and let recovery reapply it.
+    }
+
     this.updateStatus({})
   }
 
   async stopGesture(): Promise<void> {
+    this.gestureEnabled = false
+
     if (!this.child) {
+      this.updateStatus({})
       return
     }
 
-    this.gestureEnabled = false
-    await this.call('gesture.stop')
+    try {
+      await this.call('gesture.stop')
+    } catch {
+      // Ignore helper transport failures while shutting gesture capture down.
+    }
+
     this.updateStatus({})
   }
 
@@ -202,8 +280,14 @@ export class NativeAgentClient extends EventEmitter {
         continue
       }
 
-      const message = JSON.parse(line) as JsonRpcResponse
-      this.handleMessage(message)
+      try {
+        const message = JSON.parse(line) as JsonRpcResponse
+        this.handleMessage(message)
+      } catch (error) {
+        this.updateStatus({
+          lastError: `Malformed helper response ignored: ${error instanceof Error ? error.message : 'Unknown parse error'}`
+        })
+      }
     }
   }
 
@@ -242,9 +326,10 @@ export class NativeAgentClient extends EventEmitter {
 
   private call(method: string, params?: Record<string, unknown>): Promise<unknown> {
     if (!this.child) {
-      return Promise.reject(new Error('Native helper is unavailable'))
+      return Promise.reject(helperUnavailableError())
     }
 
+    const child = this.child
     const id = this.nextId++
     const payload: JsonRpcRequest = {
       jsonrpc: '2.0',
@@ -253,11 +338,52 @@ export class NativeAgentClient extends EventEmitter {
       params
     }
 
-    this.child.stdin.write(`${JSON.stringify(payload)}\n`)
+    try {
+      child.stdin.write(`${JSON.stringify(payload)}\n`)
+    } catch {
+      return Promise.reject(helperUnavailableError())
+    }
 
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve, reject })
     })
+  }
+
+  private handleChildUnavailable(child: NativeHelperProcess, message: string): void {
+    if (child !== this.child) {
+      return
+    }
+
+    this.child = null
+    this.stdoutBuffer = ''
+    this.rejectPending(helperUnavailableError(message))
+    this.updateStatus({
+      nativeHelperAvailable: false,
+      accessibilityTrusted: false,
+      lastError: message
+    })
+    this.scheduleRestart()
+  }
+
+  private rejectPending(error: Error): void {
+    for (const request of this.pending.values()) {
+      request.reject(error)
+    }
+
+    this.pending.clear()
+  }
+
+  private scheduleRestart(): void {
+    if (!this.shouldRestart || this.restartTimer) {
+      return
+    }
+
+    const delay = this.nextRestartDelayMs
+    this.restartTimer = this.scheduleTimeout(() => {
+      this.restartTimer = null
+      void this.launchHelper()
+    }, delay)
+    this.nextRestartDelayMs = Math.min(delay * 2, this.maxRestartDelayMs)
   }
 
   private updateStatus(patch: Partial<NativePermissionSnapshot>): void {
@@ -283,6 +409,12 @@ export class NativeAgentClient extends EventEmitter {
       this.emit('statusChanged', this.status)
     }
   }
+}
+
+function defaultSpawnProcess(binaryPath: string): NativeHelperProcess {
+  return spawn(binaryPath, [], {
+    stdio: ['pipe', 'pipe', 'pipe']
+  }) as ChildProcessWithoutNullStreams as NativeHelperProcess
 }
 
 function resolveNativeBinary(): string | null {
@@ -317,4 +449,8 @@ export function computeShakeReady(input: {
   gestureEnabled: boolean
 }): boolean {
   return input.nativeHelperAvailable && input.accessibilityTrusted && input.gestureEnabled
+}
+
+function helperUnavailableError(message = 'Native helper is unavailable'): Error {
+  return new Error(message)
 }

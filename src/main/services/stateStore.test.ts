@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -34,6 +34,7 @@ describe('StateStore', () => {
     ])
 
     store.closeShelf()
+    await store.whenIdle()
 
     expect(store.getLiveShelf()).toBeNull()
     expect(store.getRecentShelves()).toHaveLength(1)
@@ -63,6 +64,7 @@ describe('StateStore', () => {
     store.closeShelf()
 
     const restored = store.restoreShelf(live.id)
+    await store.whenIdle()
 
     expect(restored?.id).toBe(live.id)
     expect(store.getLiveShelf()?.items).toHaveLength(1)
@@ -76,8 +78,56 @@ describe('StateStore', () => {
 
     store.createShelf('manual')
     store.closeShelf()
+    await store.whenIdle()
 
     expect(store.getLiveShelf()).toBeNull()
     expect(store.getRecentShelves()).toHaveLength(0)
+  })
+
+  it('migrates legacy persisted state to version 1 on load', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dropshelf-legacy-'))
+    tempDirs.push(dir)
+    const statePath = join(dir, 'state.json')
+    await writeFile(
+      statePath,
+      JSON.stringify({
+        liveShelf: null,
+        recentShelves: [],
+        preferences: {}
+      }),
+      'utf8'
+    )
+
+    const store = new StateStore(dir)
+    await store.whenIdle()
+    const persisted = JSON.parse(await readFile(statePath, 'utf8')) as { version: number; preferences: { globalShortcut: string } }
+
+    expect(persisted.version).toBe(1)
+    expect(persisted.preferences.globalShortcut).toBe('CommandOrControl+Shift+Space')
+  })
+
+  it('flushes the latest state after rapid successive mutations', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dropshelf-flush-'))
+    tempDirs.push(dir)
+    const statePath = join(dir, 'state.json')
+    const store = new StateStore(dir)
+
+    store.createShelf('manual')
+    store.renameLiveShelf('Pinned')
+    store.setPreferences({
+      launchAtLogin: true
+    })
+    store.closeShelf()
+    await store.whenIdle()
+
+    const persisted = JSON.parse(await readFile(statePath, 'utf8')) as {
+      version: number
+      liveShelf: null
+      preferences: { launchAtLogin: boolean }
+    }
+
+    expect(persisted.version).toBe(1)
+    expect(persisted.liveShelf).toBeNull()
+    expect(persisted.preferences.launchAtLogin).toBe(true)
   })
 })

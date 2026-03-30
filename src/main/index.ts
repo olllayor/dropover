@@ -14,6 +14,7 @@ import {
   type ShelfItemRecord,
   type ShelfRecord
 } from '@shared/schema'
+import { normalizeExcludedBundleIds } from '@shared/preferences'
 import { NativeAgentClient, type ShakeDetectedEvent } from './native/nativeAgent'
 import { payloadToItems, detectPayloadFromText, getFileBackedPath, isFileBackedItem, refreshFileRef } from './services/payloads'
 import { isOpenPathSuccess, normalizeGlobalShortcut, urlToWebloc, validateGlobalShortcut } from './services/systemUtils'
@@ -31,6 +32,9 @@ let shortcutStatus: Pick<PermissionStatus, 'shortcutRegistered' | 'shortcutError
   shortcutRegistered: false,
   shortcutError: ''
 }
+const PROJECT_URL = 'https://github.com/olllayor/dropover'
+const WHATS_NEW_URL = `${PROJECT_URL}/releases`
+const QUICK_START_URL = `${PROJECT_URL}#readme`
 
 app.whenReady().then(async () => {
   if (process.platform === 'darwin' && app.dock) {
@@ -48,8 +52,20 @@ app.whenReady().then(async () => {
     onNewShelf: () => {
       void createShelf('tray', currentCursorPoint(), false)
     },
+    onNewShelfFromClipboard: () => {
+      void createShelfFromClipboard()
+    },
     onOpenPreferences: () => {
       void preferencesWindow.show()
+    },
+    onOpenWhatsNew: () => {
+      void shell.openExternal(WHATS_NEW_URL)
+    },
+    onOpenQuickStart: () => {
+      void shell.openExternal(QUICK_START_URL)
+    },
+    onOpenAbout: () => {
+      app.showAboutPanel()
     },
     onRestoreShelf: (id) => {
       void restoreShelf(id)
@@ -158,6 +174,30 @@ async function handleExternalPayload(payload: IngestPayload, reason: ShelfRecord
     point,
     inactive: reason === 'tray'
   })
+}
+
+async function createShelfFromClipboard(): Promise<void> {
+  const image = clipboard.readImage()
+  if (!image.isEmpty()) {
+    await handleExternalPayload(
+      {
+        kind: 'image',
+        mimeType: 'image/png',
+        base64: image.toPNG().toString('base64'),
+        filenameHint: 'clipboard-image'
+      },
+      'tray'
+    )
+    return
+  }
+
+  const text = clipboard.readText().trim()
+  if (text) {
+    await handleExternalPayload(detectPayloadFromText(text), 'tray')
+    return
+  }
+
+  await createShelf('tray', currentCursorPoint(), false)
 }
 
 async function handleShakeDetected(event: ShakeDetectedEvent): Promise<void> {
@@ -446,14 +486,32 @@ function currentPermissionStatus(): PermissionStatus {
 }
 
 function normalizePreferencePatch(patch: ReturnType<typeof preferencePatchSchema.parse>) {
-  if (patch.globalShortcut === undefined) {
-    return patch
+  let nextPatch = patch
+
+  if (patch.globalShortcut !== undefined) {
+    nextPatch = {
+      ...nextPatch,
+      globalShortcut: normalizeGlobalShortcut(patch.globalShortcut)
+    }
   }
 
-  return {
-    ...patch,
-    globalShortcut: normalizeGlobalShortcut(patch.globalShortcut)
+  if (patch.excludedBundleIds !== undefined) {
+    const { normalized, invalid } = normalizeExcludedBundleIds(patch.excludedBundleIds)
+    if (invalid.length > 0) {
+      throw new Error(
+        invalid.length === 1
+          ? `Invalid macOS bundle identifier: ${invalid[0]}`
+          : `Invalid macOS bundle identifiers: ${invalid.join(', ')}`
+      )
+    }
+
+    nextPatch = {
+      ...nextPatch,
+      excludedBundleIds: normalized
+    }
   }
+
+  return nextPatch
 }
 
 function sanitizeName(value: string): string {

@@ -3,7 +3,11 @@ import type { AppState, ShelfRecord } from '@shared/schema'
 
 interface TrayCallbacks {
   onNewShelf(): void
+  onNewShelfFromClipboard(): void
   onOpenPreferences(): void
+  onOpenWhatsNew(): void
+  onOpenQuickStart(): void
+  onOpenAbout(): void
   onRestoreShelf(id: string): void
   onDropFiles(paths: string[]): void
   onDropText(text: string): void
@@ -46,6 +50,10 @@ export class TrayController {
         click: () => this.callbacks.onNewShelf()
       },
       {
+        label: 'New Shelf From Clipboard',
+        click: () => this.callbacks.onNewShelfFromClipboard()
+      },
+      {
         label: 'Recent Shelves',
         submenu: recentShelves.length > 0 ? recentShelves.map((shelf) => createRestoreMenuItem(shelf, this.callbacks.onRestoreShelf)) : [{ label: 'No recent shelves', enabled: false }]
       },
@@ -53,14 +61,32 @@ export class TrayController {
         type: 'separator'
       },
       {
-        label: 'Preferences',
+        label: `Version ${process.env.npm_package_version ?? '0.1.0'}`,
+        enabled: false
+      },
+      {
+        label: 'New in This Version…',
+        click: () => this.callbacks.onOpenWhatsNew()
+      },
+      {
+        label: 'Quick Start Guide…',
+        click: () => this.callbacks.onOpenQuickStart()
+      },
+      {
+        label: 'About Ledge…',
+        click: () => this.callbacks.onOpenAbout()
+      },
+      {
+        label: 'Settings…',
+        accelerator: 'CommandOrControl+,',
         click: () => this.callbacks.onOpenPreferences()
       },
       {
         type: 'separator'
       },
       {
-        label: 'Quit Ledge',
+        label: 'Quit',
+        accelerator: 'CommandOrControl+Q',
         click: () => this.callbacks.onQuit()
       }
     ])

@@ -29,7 +29,7 @@ export class PreferencesWindow {
       minHeight: 640,
       show: false,
       titleBarStyle: 'hiddenInset',
-      backgroundColor: '#f1ebe2',
+      backgroundColor: '#171516',
       webPreferences: {
         preload: resolvePreloadPath(),
         contextIsolation: true,
