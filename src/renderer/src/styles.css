@@ -228,7 +228,8 @@ button {
 .item-subtitle.compact,
 .item-preview.compact,
 .banner-copy,
-.footer-note {
+.footer-note,
+.pref-status {
   font-size: 0.76rem;
   line-height: 1.35;
 }
@@ -283,6 +284,11 @@ button {
   background: rgba(255, 255, 255, 0.74);
 }
 
+.item-card.is-missing {
+  border-color: rgba(155, 58, 45, 0.22);
+  background: rgba(255, 247, 244, 0.88);
+}
+
 .item-copy {
   min-width: 0;
   flex: 1;
@@ -330,6 +336,13 @@ button {
 
 .ghost-button.small {
   padding: 0.35rem 0.58rem;
+}
+
+.ghost-button:disabled,
+.toolbar-button:disabled,
+.mini-button:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 .permission-banner.compact {
@@ -422,6 +435,15 @@ button {
 .pref-textarea {
   min-height: 128px;
   resize: vertical;
+}
+
+.pref-status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.pref-status.is-error {
+  color: var(--danger);
 }
 
 .meta-list {

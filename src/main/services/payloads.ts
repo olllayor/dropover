@@ -28,6 +28,10 @@ export function getFileBackedPath(item: FileBackedShelfItem): string | null {
     return null
   }
 
+  if (item.file.isMissing) {
+    return null
+  }
+
   return item.file.resolvedPath || item.file.originalPath || null
 }
 
@@ -59,7 +63,7 @@ export async function payloadToItems(
 ): Promise<ShelfItemRecord[]> {
   switch (payload.kind) {
     case 'fileDrop':
-      return Promise.all(payload.paths.map((path, index) => createPathItem(path, index, context)))
+      return createPathItems(payload.paths, context)
     case 'text':
       return [createTextItem(payload.text, 0)]
     case 'url':
@@ -74,10 +78,11 @@ export async function refreshFileRef(
   context: Pick<PayloadContext, 'resolveBookmark'>
 ): Promise<FileRef> {
   if (!file.bookmarkBase64) {
+    const exists = await pathExists(file.originalPath)
     return fileRefSchema.parse({
       ...file,
-      resolvedPath: file.originalPath,
-      isMissing: false,
+      resolvedPath: exists ? file.originalPath : '',
+      isMissing: !exists,
       isStale: false
     })
   }
@@ -88,6 +93,12 @@ export async function refreshFileRef(
     ...file,
     ...resolved
   })
+}
+
+async function createPathItems(paths: string[], context: PayloadContext): Promise<ShelfItemRecord[]> {
+  const settled = await Promise.allSettled(paths.map(async (path, index) => createPathItem(path, index, context)))
+
+  return settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
 }
 
 function createTextItem(text: string, order: number): ShelfItemRecord {
@@ -230,6 +241,15 @@ async function safeBookmark(path: string, context: PayloadContext): Promise<stri
     return await context.createBookmark(path)
   } catch {
     return ''
+  }
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  try {
+    await fs.access(path)
+    return true
+  } catch {
+    return false
   }
 }
 

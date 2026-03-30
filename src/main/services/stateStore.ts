@@ -190,6 +190,7 @@ export class StateStore {
       return
     }
 
+    // Empty shelves are transient workspace, not recent history.
     if (liveShelf.items.length > 0) {
       const existing = this.persisted.recentShelves.filter((entry) => entry.id !== liveShelf.id)
       this.persisted.recentShelves = [liveShelf, ...existing].slice(0, 10)

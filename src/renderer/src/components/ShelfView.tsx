@@ -10,6 +10,39 @@ export function ShelfView({ state }: ShelfViewProps) {
   const recentShelves = useDeferredValue(state.recentShelves)
   const [nameDraft, setNameDraft] = useState(liveShelf?.name ?? 'Untitled Shelf')
   const [isImporting, setIsImporting] = useState(false)
+  const shareableCount =
+    liveShelf?.items.filter(
+      (item) => (item.kind === 'file' || item.kind === 'folder' || item.kind === 'imageAsset') && !item.file.isMissing
+    ).length ?? 0
+  const shortcutLabel = !state.preferences.globalShortcut
+    ? 'Shortcut off'
+    : state.permissionStatus.shortcutRegistered
+      ? `Shortcut: ${state.preferences.globalShortcut}`
+      : 'Shortcut unavailable'
+  const helperLabel = !state.permissionStatus.nativeHelperAvailable
+    ? 'Helper unavailable'
+    : state.preferences.shakeEnabled
+      ? state.permissionStatus.shakeReady
+        ? `Shake: ${state.preferences.shakeSensitivity}`
+        : 'Shake blocked'
+      : 'Shake off'
+  const banner =
+    !state.permissionStatus.nativeHelperAvailable
+      ? {
+          title: 'Native helper is unavailable',
+          copy: state.permissionStatus.lastError || 'Rebuild the bundled helper to re-enable shake detection.'
+        }
+      : state.preferences.shakeEnabled && !state.permissionStatus.accessibilityTrusted
+        ? {
+            title: 'Accessibility access is off',
+            copy: 'Enable it if you want shake-to-open.'
+          }
+        : state.permissionStatus.lastError
+          ? {
+              title: 'Native helper reported an error',
+              copy: state.permissionStatus.lastError
+            }
+          : null
 
   useEffect(() => {
     setNameDraft(liveShelf?.name ?? 'Untitled Shelf')
@@ -89,7 +122,7 @@ export function ShelfView({ state }: ShelfViewProps) {
           </div>
 
           <div className="toolbar-actions">
-            <button className="toolbar-button" onClick={() => void window.dropover.shareShelfItems()} disabled={itemCount === 0}>
+            <button className="toolbar-button" onClick={() => void window.dropover.shareShelfItems()} disabled={shareableCount === 0}>
               Share
             </button>
             <button className="toolbar-button" onClick={() => void window.dropover.clearShelf()} disabled={itemCount === 0}>
@@ -106,7 +139,7 @@ export function ShelfView({ state }: ShelfViewProps) {
             <div>
               <p className="surface-title compact">{itemCount === 0 ? 'Drop anything here' : `${itemCount} item${itemCount === 1 ? '' : 's'} on shelf`}</p>
               <p className="surface-subtitle compact">
-                Files, folders, text, links, and pasted images. Drag files back out when ready.
+                Files, folders, text, links, and pasted images. Unavailable files stay on the shelf until you remove them.
               </p>
             </div>
             <div className="status-pill compact">{isImporting ? 'Importing' : liveShelf?.origin ?? 'standby'}</div>
@@ -114,10 +147,10 @@ export function ShelfView({ state }: ShelfViewProps) {
 
           {itemCount === 0 ? (
             <div className="empty-state compact">
-              <p>Shake, use the tray, or trigger your shortcut to open a temporary shelf.</p>
+              <p>Shake, use the tray, or trigger your shortcut to open a shelf near the cursor.</p>
               <div className="meta-strip">
-                <span className="meta-chip">Shortcut: {state.preferences.globalShortcut || 'not set'}</span>
-                <span className="meta-chip">Shake: {state.preferences.shakeEnabled ? state.preferences.shakeSensitivity : 'off'}</span>
+                <span className="meta-chip">{shortcutLabel}</span>
+                <span className="meta-chip">{helperLabel}</span>
               </div>
             </div>
           ) : (
@@ -135,11 +168,11 @@ export function ShelfView({ state }: ShelfViewProps) {
           )}
         </section>
 
-        {!state.permissionStatus.accessibilityTrusted ? (
+        {banner ? (
           <section className="permission-banner compact">
             <div>
-              <p className="banner-title">Accessibility access is off</p>
-              <p className="banner-copy">Enable it if you want shake-to-open.</p>
+              <p className="banner-title">{banner.title}</p>
+              <p className="banner-copy">{banner.copy}</p>
             </div>
             <button className="ghost-button small" onClick={() => void window.dropover.openPermissionSettings()}>
               Open Settings
@@ -161,7 +194,7 @@ export function ShelfView({ state }: ShelfViewProps) {
           </div>
 
           <div className="footer-meta">
-            <span className="footer-note">Copy drag-out</span>
+            <span className="footer-note">Single live shelf</span>
             <span className="footer-note">{state.preferences.excludedBundleIds.length} excluded apps</span>
           </div>
         </footer>
@@ -180,13 +213,18 @@ interface ItemCardProps {
 function ItemCard({ item, isFirst, isLast, onMove }: ItemCardProps) {
   const fileBacked = item.kind === 'file' || item.kind === 'folder' || item.kind === 'imageAsset'
   const badge = fileBacked ? (item.kind === 'folder' ? 'Folder' : item.kind === 'imageAsset' ? 'Image' : 'File') : item.kind === 'url' ? 'Link' : 'Text'
+  const missing = fileBacked && item.file.isMissing
+  const stale = fileBacked && item.file.isStale && !missing
+  const fileStatus = missing ? 'Missing from disk' : stale ? 'Resolved from bookmark' : ''
+  const previewCopy = missing ? item.file.originalPath : item.preview.summary
+  const actionTitle = missing ? 'This item is no longer available on disk.' : undefined
 
   return (
     <article
-      className={`item-card compact item-${item.kind}`}
-      draggable={fileBacked}
+      className={`item-card compact item-${item.kind}${missing ? ' is-missing' : ''}`}
+      draggable={fileBacked && !missing}
       onDragStart={(event) => {
-        if (!fileBacked) {
+        if (!fileBacked || missing) {
           return
         }
 
@@ -199,7 +237,7 @@ function ItemCard({ item, isFirst, isLast, onMove }: ItemCardProps) {
           <div className="item-badge">{badge}</div>
           <div>
             <p className="item-title compact">{item.title}</p>
-            <p className="item-subtitle compact">{item.subtitle || item.preview.summary}</p>
+            <p className="item-subtitle compact">{fileStatus || item.subtitle || item.preview.summary}</p>
           </div>
         </div>
         <div className="item-controls">
@@ -215,18 +253,18 @@ function ItemCard({ item, isFirst, isLast, onMove }: ItemCardProps) {
         </div>
       </div>
 
-      <p className="item-preview compact">{item.preview.summary}</p>
+      <p className="item-preview compact">{previewCopy}</p>
 
       <div className="item-actions compact">
         {fileBacked ? (
           <>
-            <button className="ghost-button small" onClick={() => void window.dropover.previewItem(item.id)}>
+            <button className="ghost-button small" onClick={() => void window.dropover.previewItem(item.id)} disabled={missing} title={actionTitle}>
               Quick Look
             </button>
-            <button className="ghost-button small" onClick={() => void window.dropover.revealItem(item.id)}>
+            <button className="ghost-button small" onClick={() => void window.dropover.revealItem(item.id)} disabled={missing} title={actionTitle}>
               Reveal
             </button>
-            <button className="ghost-button small" onClick={() => void window.dropover.openItem(item.id)}>
+            <button className="ghost-button small" onClick={() => void window.dropover.openItem(item.id)} disabled={missing} title={actionTitle}>
               Open
             </button>
           </>

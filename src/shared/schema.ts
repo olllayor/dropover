@@ -78,15 +78,16 @@ export const preferencesRecordSchema = z.object({
   shakeEnabled: z.boolean().default(true),
   shakeSensitivity: shakeSensitivitySchema.default('balanced'),
   excludedBundleIds: z.array(z.string()).default([]),
-  globalShortcut: z.string().default('CommandOrControl+Shift+Space'),
-  dragOutMode: z.literal('copy').default('copy')
+  globalShortcut: z.string().default('CommandOrControl+Shift+Space')
 })
 
 export const permissionStatusSchema = z.object({
   nativeHelperAvailable: z.boolean().default(false),
   accessibilityTrusted: z.boolean().default(false),
   shakeReady: z.boolean().default(false),
-  lastError: z.string().default('')
+  lastError: z.string().default(''),
+  shortcutRegistered: z.boolean().default(false),
+  shortcutError: z.string().default('')
 })
 
 export const appStateSchema = z.object({

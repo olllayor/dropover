@@ -52,6 +52,7 @@ export class NativeAgentClient extends EventEmitter {
   private nextId = 1
   private stdoutBuffer = ''
   private readonly pending = new Map<number, PendingRequest>()
+  private gestureEnabled = false
   private status: NativePermissionSnapshot = {
     nativeHelperAvailable: false,
     accessibilityTrusted: false,
@@ -63,12 +64,12 @@ export class NativeAgentClient extends EventEmitter {
     const binaryPath = resolveNativeBinary()
 
     if (!binaryPath || !existsSync(binaryPath)) {
-      this.status = {
+      this.updateStatus({
         nativeHelperAvailable: false,
         accessibilityTrusted: false,
         shakeReady: false,
         lastError: 'Native helper binary not found'
-      }
+      })
       return
     }
 
@@ -79,20 +80,33 @@ export class NativeAgentClient extends EventEmitter {
     this.child.stdout.setEncoding('utf8')
     this.child.stdout.on('data', (chunk) => this.consumeStdout(chunk))
     this.child.stderr.on('data', (chunk) => {
-      this.status.lastError = chunk.toString().trim()
+      this.updateStatus({
+        lastError: chunk.toString().trim()
+      })
     })
     this.child.on('exit', () => {
-      this.status = {
-        ...this.status,
+      this.updateStatus({
         nativeHelperAvailable: false,
-        shakeReady: false,
+        accessibilityTrusted: false,
         lastError: this.status.lastError || 'Native helper exited unexpectedly'
-      }
+      })
+    })
+    this.child.on('error', (error) => {
+      this.updateStatus({
+        nativeHelperAvailable: false,
+        accessibilityTrusted: false,
+        lastError: error.message
+      })
     })
 
-    this.status.nativeHelperAvailable = true
+    this.updateStatus({
+      nativeHelperAvailable: true,
+      lastError: ''
+    })
     const permission = await this.getPermissions()
-    this.status.accessibilityTrusted = permission.accessibilityTrusted
+    this.updateStatus({
+      accessibilityTrusted: permission.accessibilityTrusted
+    })
   }
 
   getStatus(): NativePermissionSnapshot {
@@ -108,8 +122,9 @@ export class NativeAgentClient extends EventEmitter {
 
     const result = await this.call('permissions.getStatus')
     const parsed = nativePermissionStatusSchema.parse(result)
-    this.status.accessibilityTrusted = parsed.accessibilityTrusted
-    this.status.shakeReady = this.status.nativeHelperAvailable
+    this.updateStatus({
+      accessibilityTrusted: parsed.accessibilityTrusted
+    })
     return parsed
   }
 
@@ -127,12 +142,13 @@ export class NativeAgentClient extends EventEmitter {
       return
     }
 
+    this.gestureEnabled = preferences.shakeEnabled
     await this.call('gesture.start', {
       enabled: preferences.shakeEnabled,
       excludedBundleIds: preferences.excludedBundleIds,
       sensitivity: preferences.shakeSensitivity
     })
-    this.status.shakeReady = preferences.shakeEnabled
+    this.updateStatus({})
   }
 
   async stopGesture(): Promise<void> {
@@ -140,8 +156,9 @@ export class NativeAgentClient extends EventEmitter {
       return
     }
 
+    this.gestureEnabled = false
     await this.call('gesture.stop')
-    this.status.shakeReady = false
+    this.updateStatus({})
   }
 
   async createBookmark(path: string): Promise<string> {
@@ -242,6 +259,30 @@ export class NativeAgentClient extends EventEmitter {
       this.pending.set(id, { resolve, reject })
     })
   }
+
+  private updateStatus(patch: Partial<NativePermissionSnapshot>): void {
+    const next: NativePermissionSnapshot = {
+      ...this.status,
+      ...patch,
+      shakeReady: computeShakeReady({
+        nativeHelperAvailable: patch.nativeHelperAvailable ?? this.status.nativeHelperAvailable,
+        accessibilityTrusted: patch.accessibilityTrusted ?? this.status.accessibilityTrusted,
+        gestureEnabled: this.gestureEnabled
+      })
+    }
+
+    const changed =
+      next.nativeHelperAvailable !== this.status.nativeHelperAvailable ||
+      next.accessibilityTrusted !== this.status.accessibilityTrusted ||
+      next.shakeReady !== this.status.shakeReady ||
+      next.lastError !== this.status.lastError
+
+    this.status = next
+
+    if (changed) {
+      this.emit('statusChanged', this.status)
+    }
+  }
 }
 
 function resolveNativeBinary(): string | null {
@@ -268,4 +309,12 @@ export function sensitivityThresholds(sensitivity: ShakeSensitivity): {
     default:
       return { minimumReversals: 3, minimumDistance: 64 }
   }
+}
+
+export function computeShakeReady(input: {
+  nativeHelperAvailable: boolean
+  accessibilityTrusted: boolean
+  gestureEnabled: boolean
+}): boolean {
+  return input.nativeHelperAvailable && input.accessibilityTrusted && input.gestureEnabled
 }

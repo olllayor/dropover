@@ -8,10 +8,21 @@ interface PreferencesViewProps {
 export function PreferencesView({ state }: PreferencesViewProps) {
   const preferences = state.preferences
   const [excludedText, setExcludedText] = useState(preferences.excludedBundleIds.join('\n'))
+  const [shortcutDraft, setShortcutDraft] = useState(preferences.globalShortcut)
 
   useEffect(() => {
     setExcludedText(preferences.excludedBundleIds.join('\n'))
   }, [preferences.excludedBundleIds])
+
+  useEffect(() => {
+    setShortcutDraft(preferences.globalShortcut)
+  }, [preferences.globalShortcut])
+
+  const shortcutStatus = !preferences.globalShortcut
+    ? 'Shortcut disabled'
+    : state.permissionStatus.shortcutRegistered
+      ? 'Shortcut active'
+      : 'Shortcut unavailable'
 
   return (
     <main className="preferences-shell">
@@ -50,10 +61,19 @@ export function PreferencesView({ state }: PreferencesViewProps) {
           <input
             id="shortcut-input"
             className="pref-input"
-            value={preferences.globalShortcut}
-            onChange={(event) => void window.dropover.setPreferences({ globalShortcut: event.target.value })}
+            value={shortcutDraft}
+            onChange={(event) => setShortcutDraft(event.target.value)}
+            onBlur={() => void window.dropover.setPreferences({ globalShortcut: shortcutDraft })}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.currentTarget.blur()
+              }
+            }}
           />
-          <p className="pref-help">Use Electron accelerator syntax. Example: <code>CommandOrControl+Shift+Space</code>.</p>
+          <p className="pref-help">Use Electron accelerator syntax. Leave blank to disable. Example: <code>CommandOrControl+Shift+Space</code>.</p>
+          <p className={`pref-status ${state.permissionStatus.shortcutError ? 'is-error' : ''}`}>
+            {state.permissionStatus.shortcutError || shortcutStatus}
+          </p>
         </div>
 
         <div className="pref-card wide">
@@ -102,9 +122,11 @@ export function PreferencesView({ state }: PreferencesViewProps) {
           <p className="pref-label">Helper status</p>
           <ul className="meta-list">
             <li>Native helper: {state.permissionStatus.nativeHelperAvailable ? 'connected' : 'missing'}</li>
-            <li>Accessibility: {state.permissionStatus.accessibilityTrusted ? 'trusted' : 'not confirmed'}</li>
-            <li>Shake ready: {state.permissionStatus.shakeReady ? 'yes' : 'no'}</li>
+            <li>Accessibility: {state.permissionStatus.accessibilityTrusted ? 'trusted' : 'required for shake'}</li>
+            <li>Shake gesture: {preferences.shakeEnabled ? (state.permissionStatus.shakeReady ? 'ready' : 'blocked') : 'disabled'}</li>
+            <li>Shortcut: {shortcutStatus.toLowerCase()}</li>
           </ul>
+          {state.permissionStatus.lastError ? <p className="pref-status is-error">{state.permissionStatus.lastError}</p> : null}
           <button className="ghost-button" onClick={() => void window.dropover.openPermissionSettings()}>
             Open accessibility settings
           </button>
@@ -115,8 +137,8 @@ export function PreferencesView({ state }: PreferencesViewProps) {
           <ul className="meta-list">
             <li>Only one live shelf at a time.</li>
             <li>Recent shelves keep the most recent 10 non-empty shelves.</li>
-            <li>File drag-out is copy/export semantics in v1.</li>
-            <li>Text and URLs use copy, save, and open actions instead of native mixed drag-out.</li>
+            <li>Missing file references stay visible but their actions are disabled.</li>
+            <li>Pinned shelves, detail view, and cloud workflows are still deferred.</li>
           </ul>
         </div>
       </section>

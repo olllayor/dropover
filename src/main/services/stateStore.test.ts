@@ -68,4 +68,16 @@ describe('StateStore', () => {
     expect(store.getLiveShelf()?.items).toHaveLength(1)
     expect(store.getRecentShelves()).toHaveLength(0)
   })
+
+  it('does not archive empty shelves', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dropshelf-empty-'))
+    tempDirs.push(dir)
+    const store = new StateStore(dir)
+
+    store.createShelf('manual')
+    store.closeShelf()
+
+    expect(store.getLiveShelf()).toBeNull()
+    expect(store.getRecentShelves()).toHaveLength(0)
+  })
 })

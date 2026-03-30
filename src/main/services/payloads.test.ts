@@ -2,7 +2,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { detectPayloadFromText, getFileBackedPath, isFileBackedItem, payloadToItems } from './payloads'
+import { detectPayloadFromText, getFileBackedPath, isFileBackedItem, payloadToItems, refreshFileRef } from './payloads'
 
 const tempDirs: string[] = []
 
@@ -70,6 +70,32 @@ describe('payloadToItems', () => {
     }
     expect(getFileBackedPath(items[0])).toContain(dir)
   })
+
+  it('skips invalid dropped paths without failing valid ones', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'dropshelf-partial-drop-'))
+    tempDirs.push(dir)
+    const filePath = join(dir, 'sample.txt')
+    await writeFile(filePath, 'hello')
+
+    const items = await payloadToItems(
+      {
+        kind: 'fileDrop',
+        paths: [filePath, join(dir, 'missing.txt')]
+      },
+      {
+        assetsDir: dir,
+        createBookmark: async (path) => `bookmark:${path}`,
+        resolveBookmark: async (bookmarkBase64) => ({
+          resolvedPath: bookmarkBase64.replace('bookmark:', ''),
+          isStale: false,
+          isMissing: false
+        })
+      }
+    )
+
+    expect(items).toHaveLength(1)
+    expect(items[0]?.kind).toBe('file')
+  })
 })
 
 describe('detectPayloadFromText', () => {
@@ -79,5 +105,29 @@ describe('detectPayloadFromText', () => {
 
   it('keeps regular text as text payloads', () => {
     expect(detectPayloadFromText('just a note').kind).toBe('text')
+  })
+})
+
+describe('refreshFileRef', () => {
+  it('marks missing non-bookmarked files as unavailable', async () => {
+    const refreshed = await refreshFileRef(
+      {
+        originalPath: '/tmp/ledge-missing-item.txt',
+        resolvedPath: '/tmp/ledge-missing-item.txt',
+        bookmarkBase64: '',
+        isStale: false,
+        isMissing: false
+      },
+      {
+        resolveBookmark: async () => ({
+          resolvedPath: '',
+          isStale: false,
+          isMissing: true
+        })
+      }
+    )
+
+    expect(refreshed.isMissing).toBe(true)
+    expect(refreshed.resolvedPath).toBe('')
   })
 })

@@ -6,14 +6,17 @@ import {
   appStateSchema,
   createShelfInputSchema,
   ingestPayloadSchema,
+  permissionStatusSchema,
   preferencePatchSchema,
   type AppState,
   type IngestPayload,
+  type PermissionStatus,
   type ShelfItemRecord,
   type ShelfRecord
 } from '@shared/schema'
 import { NativeAgentClient, type ShakeDetectedEvent } from './native/nativeAgent'
 import { payloadToItems, detectPayloadFromText, getFileBackedPath, isFileBackedItem, refreshFileRef } from './services/payloads'
+import { isOpenPathSuccess, normalizeGlobalShortcut, urlToWebloc, validateGlobalShortcut } from './services/systemUtils'
 import { StateStore } from './services/stateStore'
 import { PreferencesWindow } from './windows/preferencesWindow'
 import { ShelfWindow } from './windows/shelfWindow'
@@ -24,6 +27,10 @@ let nativeAgent: NativeAgentClient
 let tray: TrayController
 let shelfWindow: ShelfWindow
 let preferencesWindow: PreferencesWindow
+let shortcutStatus: Pick<PermissionStatus, 'shortcutRegistered' | 'shortcutError'> = {
+  shortcutRegistered: false,
+  shortcutError: ''
+}
 
 app.whenReady().then(async () => {
   if (process.platform === 'darwin' && app.dock) {
@@ -58,6 +65,9 @@ app.whenReady().then(async () => {
     }
   })
 
+  nativeAgent.on('statusChanged', () => {
+    broadcastState()
+  })
   await nativeAgent.start()
   nativeAgent.on('shakeDetected', (event: ShakeDetectedEvent) => {
     void handleShakeDetected(event)
@@ -92,16 +102,14 @@ function registerIpc(): void {
   })
   ipcMain.handle(IPC_CHANNELS.getPreferences, async () => stateStore.getPreferences())
   ipcMain.handle(IPC_CHANNELS.setPreferences, async (_event, patch: unknown) => {
-    stateStore.setPreferences(preferencePatchSchema.parse(patch))
+    stateStore.setPreferences(normalizePreferencePatch(preferencePatchSchema.parse(patch)))
     syncSystemPreferences()
     await nativeAgent.configureGesture(stateStore.getPreferences())
     broadcastState()
     return stateStore.getPreferences()
   })
   ipcMain.handle(IPC_CHANNELS.getRecentShelves, async () => stateStore.getRecentShelves())
-  ipcMain.handle(IPC_CHANNELS.getPermissionStatus, async () => ({
-    ...nativeAgent.getStatus()
-  }))
+  ipcMain.handle(IPC_CHANNELS.getPermissionStatus, async () => currentPermissionStatus())
   ipcMain.handle(IPC_CHANNELS.openPermissionSettings, async () => nativeAgent.openPermissionSettings())
   ipcMain.handle(IPC_CHANNELS.previewItem, async (_event, itemId: string) => previewItem(itemId))
   ipcMain.handle(IPC_CHANNELS.revealItem, async (_event, itemId: string) => revealItem(itemId))
@@ -144,8 +152,12 @@ function registerIpc(): void {
 }
 
 async function handleExternalPayload(payload: IngestPayload, reason: ShelfRecord['origin']): Promise<void> {
-  await createShelf(reason, currentCursorPoint(), reason === 'tray')
-  await addPayloadToLiveShelf(payload)
+  const point = currentCursorPoint()
+  await addPayloadToLiveShelf(payload, {
+    origin: reason,
+    point,
+    inactive: reason === 'tray'
+  })
 }
 
 async function handleShakeDetected(event: ShakeDetectedEvent): Promise<void> {
@@ -158,7 +170,9 @@ async function handleShakeDetected(event: ShakeDetectedEvent): Promise<void> {
     return
   }
 
-  await createShelf('shake', { x: event.x, y: event.y }, true)
+  // Electron already reports the cursor in the coordinate space used by BrowserWindow.
+  // Using it here avoids AppKit-to-Electron translation errors on multi-display setups.
+  await createShelf('shake', currentCursorPoint(), true)
 }
 
 async function createShelf(
@@ -205,16 +219,29 @@ async function restoreShelf(id: string): Promise<AppState> {
   return broadcastState()
 }
 
-async function addPayloadToLiveShelf(payload: IngestPayload): Promise<void> {
+async function addPayloadToLiveShelf(
+  payload: IngestPayload,
+  options: {
+    origin?: ShelfRecord['origin']
+    point?: { x: number; y: number }
+    inactive?: boolean
+  } = {}
+): Promise<boolean> {
   const items = await payloadToItems(payload, {
     assetsDir: stateStore.assetsDir,
     createBookmark: (path) => nativeAgent.createBookmark(path),
     resolveBookmark: (bookmarkBase64, originalPath) => nativeAgent.resolveBookmark(bookmarkBase64, originalPath)
   })
-  stateStore.ensureLiveShelf('manual')
+
+  if (items.length === 0) {
+    return false
+  }
+
+  stateStore.ensureLiveShelf(options.origin ?? 'manual')
   stateStore.appendItems(items)
-  await shelfWindow.showNear(currentCursorPoint(), false)
+  await shelfWindow.showNear(options.point ?? currentCursorPoint(), options.inactive ?? false)
   broadcastState()
+  return true
 }
 
 function syncSystemPreferences(): void {
@@ -229,15 +256,48 @@ function syncSystemPreferences(): void {
     }
   }
   globalShortcut.unregisterAll()
-  if (preferences.globalShortcut) {
-    globalShortcut.register(preferences.globalShortcut, () => {
+  shortcutStatus = {
+    shortcutRegistered: false,
+    shortcutError: ''
+  }
+
+  if (!preferences.globalShortcut) {
+    return
+  }
+
+  const shortcutError = validateGlobalShortcut(preferences.globalShortcut)
+  if (shortcutError) {
+    shortcutStatus = {
+      shortcutRegistered: false,
+      shortcutError
+    }
+    return
+  }
+
+  try {
+    const registered = globalShortcut.register(preferences.globalShortcut, () => {
       void createShelf('shortcut', currentCursorPoint(), false)
     })
+
+    shortcutStatus = registered
+      ? {
+          shortcutRegistered: true,
+          shortcutError: ''
+        }
+      : {
+          shortcutRegistered: false,
+          shortcutError: 'Shortcut could not be registered. It may already be in use.'
+        }
+  } catch (error) {
+    shortcutStatus = {
+      shortcutRegistered: false,
+      shortcutError: error instanceof Error ? error.message : 'Shortcut could not be registered.'
+    }
   }
 }
 
 function broadcastState(): AppState {
-  const state = appStateSchema.parse(stateStore.snapshot(nativeAgent.getStatus()))
+  const state = appStateSchema.parse(stateStore.snapshot(currentPermissionStatus()))
   tray.update(state)
   shelfWindow.sendState(state)
   preferencesWindow.sendState(state)
@@ -295,8 +355,7 @@ async function openItem(itemId: string): Promise<boolean> {
     return false
   }
 
-  await shell.openPath(path)
-  return true
+  return isOpenPathSuccess(await shell.openPath(path))
 }
 
 async function copyItem(itemId: string): Promise<boolean> {
@@ -379,12 +438,26 @@ function currentCursorPoint() {
   return screen.getCursorScreenPoint()
 }
 
-function sanitizeName(value: string): string {
-  return value.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'drop-item'
+function currentPermissionStatus(): PermissionStatus {
+  return permissionStatusSchema.parse({
+    ...nativeAgent.getStatus(),
+    ...shortcutStatus
+  })
 }
 
-function urlToWebloc(url: string): string {
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0">\n<dict>\n  <key>URL</key>\n  <string>${url}</string>\n</dict>\n</plist>\n`
+function normalizePreferencePatch(patch: ReturnType<typeof preferencePatchSchema.parse>) {
+  if (patch.globalShortcut === undefined) {
+    return patch
+  }
+
+  return {
+    ...patch,
+    globalShortcut: normalizeGlobalShortcut(patch.globalShortcut)
+  }
+}
+
+function sanitizeName(value: string): string {
+  return value.replace(/[^a-z0-9-_]+/gi, '-').replace(/^-+|-+$/g, '') || 'drop-item'
 }
 
 function dragIconImage() {
