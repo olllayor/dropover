@@ -47,8 +47,8 @@ export interface DropoverAPI {
   getRecentShelves(): Promise<ShelfRecord[]>
   getPermissionStatus(): Promise<PermissionStatus>
   openPermissionSettings(): Promise<boolean>
-  startItemDrag(itemId: string): void
-  startItemsDrag(itemIds: string[]): void
+  startItemDrag(itemId: string): boolean
+  startItemsDrag(itemIds: string[]): boolean
   previewItem(itemId: string): Promise<boolean>
   revealItem(itemId: string): Promise<boolean>
   openItem(itemId: string): Promise<boolean>

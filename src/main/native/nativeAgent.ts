@@ -62,6 +62,7 @@ interface NativeAgentClientOptions {
   resolveBinaryPath?: () => string | null
   restartDelayMs?: number
   maxRestartDelayMs?: number
+  requestTimeoutMs?: number
   scheduleTimeout?: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
 }
 
@@ -70,6 +71,7 @@ export class NativeAgentClient extends EventEmitter {
   private readonly resolveBinaryPath: () => string | null
   private readonly baseRestartDelayMs: number
   private readonly maxRestartDelayMs: number
+  private readonly requestTimeoutMs: number
   private readonly scheduleTimeout: (callback: () => void, delay: number) => ReturnType<typeof setTimeout>
   private child: NativeHelperProcess | null = null
   private nextId = 1
@@ -93,6 +95,7 @@ export class NativeAgentClient extends EventEmitter {
     this.resolveBinaryPath = options.resolveBinaryPath ?? resolveNativeBinary
     this.baseRestartDelayMs = options.restartDelayMs ?? 250
     this.maxRestartDelayMs = options.maxRestartDelayMs ?? 2_000
+    this.requestTimeoutMs = options.requestTimeoutMs ?? 5_000
     this.scheduleTimeout = options.scheduleTimeout ?? setTimeout
     this.nextRestartDelayMs = this.baseRestartDelayMs
   }
@@ -337,15 +340,39 @@ export class NativeAgentClient extends EventEmitter {
       method,
       params
     }
-
-    try {
-      child.stdin.write(`${JSON.stringify(payload)}\n`)
-    } catch {
-      return Promise.reject(helperUnavailableError())
-    }
-
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject })
+      const timeout = this.scheduleTimeout(() => {
+        const pending = this.pending.get(id)
+        if (!pending) {
+          return
+        }
+
+        this.pending.delete(id)
+        pending.reject(new Error(`Native helper request timed out: ${method}`))
+
+        if (child === this.child) {
+          this.handleChildUnavailable(child, `Native helper request timed out: ${method}`)
+        }
+      }, this.requestTimeoutMs)
+
+      this.pending.set(id, {
+        resolve: (value) => {
+          clearTimeout(timeout)
+          resolve(value)
+        },
+        reject: (reason) => {
+          clearTimeout(timeout)
+          reject(reason)
+        }
+      })
+
+      try {
+        child.stdin.write(`${JSON.stringify(payload)}\n`)
+      } catch {
+        const pending = this.pending.get(id)
+        this.pending.delete(id)
+        pending?.reject(helperUnavailableError())
+      }
     })
   }
 

@@ -154,4 +154,37 @@ describe('computeShakeReady', () => {
     expect(secondChild.methods).toContain('permissions.getStatus')
     expect(secondChild.methods).toContain('gesture.start')
   })
+
+  it('times out stalled helper calls and schedules a restart', async () => {
+    vi.useFakeTimers()
+    const firstChild = new MockChildProcess()
+    const secondChild = new MockChildProcess()
+    const spawnProcess = vi.fn<(binaryPath: string) => MockChildProcess>()
+      .mockReturnValueOnce(firstChild)
+      .mockReturnValueOnce(secondChild)
+    const agent = new NativeAgentClient({
+      spawnProcess,
+      resolveBinaryPath: () => process.execPath,
+      requestTimeoutMs: 25,
+      restartDelayMs: 50,
+      maxRestartDelayMs: 50
+    })
+
+    await agent.start()
+
+    firstChild.stdin.write.mockImplementationOnce((chunk: string) => {
+      const request = JSON.parse(chunk.trim()) as { method: string }
+      firstChild.methods.push(request.method)
+      return true
+    })
+
+    const pending = agent.createBookmark('/tmp/stall-me')
+    const pendingExpectation = expect(pending).rejects.toThrow('Native helper request timed out: bookmarks.create')
+    await vi.advanceTimersByTimeAsync(25)
+    await pendingExpectation
+    expect(agent.getStatus().lastError).toContain('timed out')
+    await vi.advanceTimersByTimeAsync(50)
+
+    expect(spawnProcess).toHaveBeenCalledTimes(2)
+  })
 })

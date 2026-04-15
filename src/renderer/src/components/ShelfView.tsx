@@ -585,20 +585,38 @@ function HeroItem({
 
   function handleHeroDragStart(event: React.DragEvent<HTMLDivElement>) {
     if (!canDragOut) {
+      console.info('[DragDebug][Renderer] Drag start ignored: cannot drag out.', {
+        itemId: item.id,
+        dragLocked,
+        isImporting,
+        exportableCount: exportableItems.length
+      })
       return
     }
 
-    event.dataTransfer.setData('text/plain', dragLabel ?? item.title)
-    event.dataTransfer.effectAllowed = 'copy'
+    console.info('[DragDebug][Renderer] Drag start received.', {
+      itemId: item.id,
+      exportableCount: exportableItems.length,
+      exportableItemIds: exportableItems.map((entry) => entry.id)
+    })
+
     event.preventDefault()
-    onExportStart()
+    const didStartDrag =
+      exportableItems.length === 1
+        ? window.dropover.startItemDrag(exportableItems[0]!.id)
+        : window.dropover.startItemsDrag(exportableItems.map((entry) => entry.id))
 
-    if (exportableItems.length === 1) {
-      window.dropover.startItemDrag(exportableItems[0]!.id)
-      return
+    console.info('[DragDebug][Renderer] Native drag handshake result.', {
+      didStartDrag,
+      exportableCount: exportableItems.length
+    })
+
+    if (didStartDrag) {
+      onExportStart()
+    } else {
+      console.warn('[DragDebug][Renderer] Native drag did not start.')
+      onExportEnd()
     }
-
-    window.dropover.startItemsDrag(exportableItems.map((entry) => entry.id))
   }
 
   return (
@@ -606,7 +624,23 @@ function HeroItem({
       className={`hero-item is-${heroMode}${canDragOut ? ' is-draggable' : ''}${isExporting ? ' is-exporting' : ''}`}
       draggable={canDragOut}
       onDragStart={handleHeroDragStart}
-      onDragEnd={onExportEnd}
+      onDragEnd={(event) => {
+        const dropEffect = event.dataTransfer.dropEffect
+        const didDropOut = dropEffect !== 'none'
+
+        console.info('[DragDebug][Renderer] Drag end fired.', {
+          itemId: item.id,
+          exportableCount: exportableItems.length,
+          dropEffect,
+          didDropOut
+        })
+
+        if (didDropOut) {
+          void window.dropover.clearShelf()
+        }
+
+        onExportEnd()
+      }}
       title={dragLabel}
     >
       <div className={`hero-stage is-${heroMode}${isExporting ? ' is-exporting' : ''}`}>
@@ -803,12 +837,11 @@ async function payloadsFromTransfer(transfer: DataTransfer): Promise<IngestPaylo
   }
 
   if (payloads.length === 0) {
-    const uriList = transfer.getData('text/uri-list').trim()
-    if (uriList) {
+    const uriListPayload = urlPayloadFromUriList(transfer.getData('text/uri-list'))
+    if (uriListPayload) {
       payloads.push({
         kind: 'url',
-        url: uriList.split('\n')[0],
-        label: uriList.split('\n')[0]
+        ...uriListPayload
       })
     }
   }
@@ -859,18 +892,66 @@ function filePathsFromUriList(uriList: string): string[] {
     })
 }
 
-async function imageToPayload(file: File): Promise<IngestPayload> {
-  const arrayBuffer = await file.arrayBuffer()
-  const bytes = new Uint8Array(arrayBuffer)
-  let binary = ''
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
+function urlPayloadFromUriList(uriList: string): { url: string; label: string } | null {
+  const firstEntry = uriList
+    .split(/\r?\n/)
+    .map((entry) => entry.trim())
+    .find((entry) => entry.length > 0 && !entry.startsWith('#'))
+
+  if (!firstEntry) {
+    return null
   }
+
+  try {
+    const parsed = new URL(firstEntry)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return null
+    }
+
+    return {
+      url: parsed.toString(),
+      label: parsed.hostname
+    }
+  } catch {
+    return null
+  }
+}
+
+async function imageToPayload(file: File): Promise<IngestPayload> {
+  const dataUrl = await readFileAsDataUrl(file)
+  const commaIndex = dataUrl.indexOf(',')
+  if (commaIndex < 0) {
+    throw new Error('Image payload encoding failed.')
+  }
+
+  const base64 = dataUrl.slice(commaIndex + 1)
+  const mimeTypeMatch = /^data:([^;,]+)[;,]/.exec(dataUrl)
 
   return {
     kind: 'image',
-    mimeType: file.type || 'image/png',
-    base64: btoa(binary),
+    mimeType: file.type || mimeTypeMatch?.[1] || 'image/png',
+    base64,
     filenameHint: file.name || 'drop-image'
   }
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onerror = () => {
+      reject(reader.error ?? new Error('Failed to read dropped image file.'))
+    }
+
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') {
+        reject(new Error('Image file could not be encoded as data URL.'))
+        return
+      }
+
+      resolve(reader.result)
+    }
+
+    reader.readAsDataURL(file)
+  })
 }

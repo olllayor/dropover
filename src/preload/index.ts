@@ -42,10 +42,10 @@ const api: DropoverAPI = {
     return ipcRenderer.invoke(IPC_CHANNELS.openPermissionSettings)
   },
   startItemDrag(itemId) {
-    ipcRenderer.sendSync(IPC_CHANNELS.startItemDrag, itemId)
+    return ipcRenderer.sendSync(IPC_CHANNELS.startItemDrag, itemId) as boolean
   },
   startItemsDrag(itemIds) {
-    ipcRenderer.sendSync(IPC_CHANNELS.startItemsDrag, itemIds)
+    return ipcRenderer.sendSync(IPC_CHANNELS.startItemsDrag, itemIds) as boolean
   },
   async previewItem(itemId) {
     return ipcRenderer.invoke(IPC_CHANNELS.previewItem, itemId)

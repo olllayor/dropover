@@ -1,6 +1,6 @@
-import { app, BrowserWindow, clipboard, dialog, globalShortcut, Menu, ipcMain, nativeImage, net, protocol, screen, shell } from 'electron'
+import { app, clipboard, dialog, globalShortcut, Menu, ipcMain, nativeImage, net, protocol, screen, shell } from 'electron'
 import { promises as fs } from 'node:fs'
-import { basename, join } from 'node:path'
+import { basename, isAbsolute, join, resolve as resolvePath, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { IPC_CHANNELS } from '@shared/ipc'
 import {
@@ -65,7 +65,12 @@ app.whenReady().then(async () => {
       return new Response('Missing asset path.', { status: 400 })
     }
 
-    return net.fetch(pathToFileURL(path).toString())
+    const allowedPath = resolveAllowedAssetPath(path)
+    if (!allowedPath) {
+      return new Response('Asset path is not allowed.', { status: 403 })
+    }
+
+    return net.fetch(pathToFileURL(allowedPath).toString())
   })
 
   stateStore = new StateStore(app.getPath('userData'))
@@ -176,19 +181,61 @@ function registerIpc(): void {
   ipcMain.handle(IPC_CHANNELS.shareShelfItems, async (_event, itemIds?: string[]) => shareItems(itemIds))
   ipcMain.on(IPC_CHANNELS.startItemDrag, (event, itemId: string) => {
     const paths = draggablePathsForItemIds([itemId])
+    console.info('[DragDebug][Main] startItemDrag request.', {
+      itemId,
+      pathCount: paths.length,
+      firstPath: paths[0] ?? null
+    })
+
     if (paths.length === 0) {
+      console.warn('[Drag] No draggable paths found for item:', itemId)
+      event.returnValue = false
       return
     }
 
-    startNativeDrag(event.sender, paths)
+    try {
+      startNativeDrag(event.sender, paths)
+      event.returnValue = true
+      console.info('[DragDebug][Main] startItemDrag succeeded.', {
+        itemId,
+        pathCount: paths.length
+      })
+    } catch (error) {
+      console.error('[DragDebug][Main] startItemDrag failed.', {
+        itemId,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      event.returnValue = false
+    }
   })
   ipcMain.on(IPC_CHANNELS.startItemsDrag, (event, itemIds: string[]) => {
     const paths = draggablePathsForItemIds(itemIds)
+    console.info('[DragDebug][Main] startItemsDrag request.', {
+      itemIds,
+      pathCount: paths.length,
+      pathsPreview: paths.slice(0, 3)
+    })
+
     if (paths.length === 0) {
+      console.warn('[Drag] No draggable paths found for items:', itemIds)
+      event.returnValue = false
       return
     }
 
-    startNativeDrag(event.sender, paths)
+    try {
+      startNativeDrag(event.sender, paths)
+      event.returnValue = true
+      console.info('[DragDebug][Main] startItemsDrag succeeded.', {
+        itemCount: itemIds.length,
+        pathCount: paths.length
+      })
+    } catch (error) {
+      console.error('[DragDebug][Main] startItemsDrag failed.', {
+        itemIds,
+        error: error instanceof Error ? error.message : String(error)
+      })
+      event.returnValue = false
+    }
   })
 }
 
@@ -316,7 +363,7 @@ async function addPayloadToLiveShelf(
 }
 
 function syncSystemPreferences(): void {
-  const preferences = stateStore.getPreferences()
+  let preferences = stateStore.getPreferences()
   if (app.isPackaged) {
     try {
       app.setLoginItemSettings({
@@ -332,11 +379,18 @@ function syncSystemPreferences(): void {
     shortcutError: ''
   }
 
-  if (!preferences.globalShortcut) {
+  const normalizedShortcut = normalizeGlobalShortcut(preferences.globalShortcut)
+  if (normalizedShortcut !== preferences.globalShortcut) {
+    preferences = stateStore.setPreferences({
+      globalShortcut: normalizedShortcut
+    })
+  }
+
+  if (!normalizedShortcut) {
     return
   }
 
-  const shortcutError = validateGlobalShortcut(preferences.globalShortcut)
+  const shortcutError = validateGlobalShortcut(normalizedShortcut)
   if (shortcutError) {
     shortcutStatus = {
       shortcutRegistered: false,
@@ -346,7 +400,7 @@ function syncSystemPreferences(): void {
   }
 
   try {
-    const registered = globalShortcut.register(preferences.globalShortcut, () => {
+    const registered = globalShortcut.register(normalizedShortcut, () => {
       void createShelf('shortcut', currentCursorPoint(), false)
     })
 
@@ -445,6 +499,14 @@ async function copyItem(itemId: string): Promise<boolean> {
     return true
   }
 
+  if (isFileBackedItem(item)) {
+    const filePath = getFileBackedPath(item)
+    if (filePath) {
+      writeFilePathsToClipboard([filePath])
+      return true
+    }
+  }
+
   return false
 }
 
@@ -516,6 +578,48 @@ function currentPermissionStatus(): PermissionStatus {
   })
 }
 
+function resolveAllowedAssetPath(path: string): string | null {
+  if (!isAbsolute(path)) {
+    return null
+  }
+
+  const normalizedPath = resolvePath(path)
+  if (isPathInside(stateStore.assetsDir, normalizedPath)) {
+    return normalizedPath
+  }
+
+  for (const item of liveShelfItems()) {
+    if (item.kind !== 'imageAsset' && !(item.kind === 'file' && item.mimeType.startsWith('image/'))) {
+      continue
+    }
+
+    const itemPath = getFileBackedPath(item)
+    if (itemPath && resolvePath(itemPath) === normalizedPath) {
+      return normalizedPath
+    }
+  }
+
+  return null
+}
+
+function isPathInside(parent: string, candidate: string): boolean {
+  const normalizedParent = resolvePath(parent)
+  const normalizedCandidate = resolvePath(candidate)
+  return normalizedCandidate === normalizedParent || normalizedCandidate.startsWith(`${normalizedParent}${sep}`)
+}
+
+function writeFilePathsToClipboard(paths: string[]): void {
+  const uniquePaths = [...new Set(paths)]
+  if (uniquePaths.length === 0) {
+    return
+  }
+
+  const uriList = uniquePaths.map((path) => pathToFileURL(path).toString()).join('\r\n')
+  clipboard.clear()
+  clipboard.writeText(uniquePaths.join('\n'))
+  clipboard.writeBuffer('text/uri-list', Buffer.from(uriList, 'utf8'))
+}
+
 function normalizePreferencePatch(patch: ReturnType<typeof preferencePatchSchema.parse>) {
   let nextPatch = patch
 
@@ -574,18 +678,25 @@ function draggablePathsForItemIds(itemIds: string[]): string[] {
 function startNativeDrag(webContents: Electron.WebContents, paths: string[]): void {
   const [firstPath] = paths
   if (!firstPath) {
+    console.warn('[DragDebug][Main] startNativeDrag aborted: no firstPath.', {
+      pathCount: paths.length
+    })
     return
   }
 
-  const ownerWindow = BrowserWindow.fromWebContents(webContents)
-  if (ownerWindow && !ownerWindow.isDestroyed()) {
-    ownerWindow.show()
-    ownerWindow.focus()
-  }
+  console.info('[DragDebug][Main] startNativeDrag begin.', {
+    webContentsId: webContents.id,
+    pathCount: paths.length,
+    firstPath
+  })
 
   const icon = dragIconImage(paths)
+  console.info('[DragDebug][Main] drag icon prepared.', {
+    isEmpty: icon.isEmpty(),
+    size: icon.getSize()
+  })
 
-  webContents.startDrag(
+  const dragPayload =
     paths.length > 1
       ? {
           file: firstPath,
@@ -596,84 +707,44 @@ function startNativeDrag(webContents: Electron.WebContents, paths: string[]): vo
           file: firstPath,
           icon
         }
-  )
+
+  console.info('[DragDebug][Main] invoking webContents.startDrag.', {
+    hasFilesArray: 'files' in dragPayload,
+    payloadFile: dragPayload.file,
+    payloadFileCount: paths.length
+  })
+
+  webContents.startDrag(dragPayload)
+
+  console.info('[DragDebug][Main] webContents.startDrag returned normally.')
 }
 
 function dragIconImage(paths: string[]) {
-  const previews = paths
-    .slice(0, 3)
-    .map((path) => nativeImage.createFromPath(path))
-    .filter((image) => !image.isEmpty())
-    .map((image) => image.resize({ width: 72, height: 72, quality: 'best' }))
+  const iconCandidates = [
+    ...paths,
+    join(app.getAppPath(), 'build', 'icon.png'),
+    join(process.resourcesPath, 'icon.png')
+  ]
 
-  if (previews.length > 0) {
-    const placements =
-      previews.length === 1
-        ? [{ x: 14, y: 12, rotation: 0 }]
-        : previews.length === 2
-          ? [
-              { x: 10, y: 12, rotation: -8 },
-              { x: 28, y: 18, rotation: 8 }
-            ]
-          : [
-              { x: 12, y: 10, rotation: -10 },
-              { x: 24, y: 12, rotation: 8 },
-              { x: 18, y: 24, rotation: 0 }
-            ]
-
-    const cards = previews
-      .map((preview, index) => {
-        const placement = placements[index]
-        if (!placement) {
-          return ''
-        }
-
-        return `
-          <g transform="translate(${placement.x} ${placement.y}) rotate(${placement.rotation} 36 36)">
-            <rect x="0" y="0" width="72" height="72" rx="14" fill="rgba(255,255,255,0.98)"/>
-            <rect x="0.75" y="0.75" width="70.5" height="70.5" rx="13.25" fill="none" stroke="rgba(255,255,255,0.82)" stroke-width="1.5"/>
-            <image href="${escapeSvgAttribute(preview.toDataURL())}" x="6" y="6" width="60" height="60" preserveAspectRatio="xMidYMid slice" clip-path="url(#drag-card-${index})"/>
-          </g>
-        `
-      })
-      .join('')
-    const defs = previews
-      .map(
-        (_preview, index) => `
-          <clipPath id="drag-card-${index}">
-            <rect x="6" y="6" width="60" height="60" rx="10"/>
-          </clipPath>
-        `
-      )
-      .join('')
-
-    const composed = nativeImage.createFromDataURL(
-      `data:image/svg+xml;base64,${Buffer.from(
-        `
-          <svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg">
-            <defs>${defs}</defs>
-            ${cards}
-          </svg>
-        `
-      ).toString('base64')}`
-    )
-
-    if (!composed.isEmpty()) {
-      return composed
+  for (const candidate of iconCandidates) {
+    const image = nativeImage.createFromPath(candidate)
+    if (image.isEmpty()) {
+      continue
     }
+
+    return image.resize({ width: 72, height: 72, quality: 'best' })
   }
 
-  const svg = `
-    <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <rect x="8" y="14" width="48" height="36" rx="12" fill="#16120F" opacity="0.92"/>
-      <rect x="14" y="20" width="36" height="8" rx="4" fill="#F4E7D2"/>
-      <rect x="14" y="33" width="24" height="6" rx="3" fill="#D6C3AA"/>
-    </svg>
-  `
+  const embeddedFallback = nativeImage.createFromBuffer(
+    Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADUlEQVR42mNk+P+/HgAEtQJ8j3u7EwAAAABJRU5ErkJggg==',
+      'base64'
+    )
+  )
 
-  return nativeImage.createFromDataURL(`data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`)
-}
+  if (!embeddedFallback.isEmpty()) {
+    return embeddedFallback.resize({ width: 72, height: 72, quality: 'best' })
+  }
 
-function escapeSvgAttribute(value: string): string {
-  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+  return nativeImage.createEmpty()
 }
