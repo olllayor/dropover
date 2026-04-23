@@ -20,8 +20,15 @@ export default defineConfig(({ command }) => ({
     build: {
       outDir: 'out/main',
       sourcemap: true,
+      lib: {
+        entry: resolve(root, 'src/main/index.ts'),
+        formats: ['cjs']
+      },
       rollupOptions: {
-        input: resolve(root, 'src/main/index.ts')
+        input: resolve(root, 'src/main/index.ts'),
+        output: {
+          entryFileNames: '[name].cjs'
+        }
       }
     }
   },
@@ -35,7 +42,8 @@ export default defineConfig(({ command }) => ({
       outDir: 'out/preload',
       sourcemap: 'inline',
       rollupOptions: {
-        input: resolve(root, 'src/preload/index.ts')
+        input: resolve(root, 'src/preload/index.ts'),
+        external: ['electron']
       }
     }
   },

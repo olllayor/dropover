@@ -1,4 +1,4 @@
-import { app, clipboard, dialog, globalShortcut, Menu, ipcMain, nativeImage, net, protocol, screen, shell } from 'electron'
+import { app, clipboard, dialog, globalShortcut, Menu, ipcMain, nativeImage, net, protocol as protocolModule, screen, shell } from 'electron'
 import { promises as fs } from 'node:fs'
 import { basename, isAbsolute, join, resolve as resolvePath, sep } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -38,7 +38,7 @@ const WHATS_NEW_URL = `${PROJECT_URL}/releases`
 const QUICK_START_URL = `${PROJECT_URL}#readme`
 const ASSET_PROTOCOL = 'dropover-asset'
 
-protocol.registerSchemesAsPrivileged([
+protocolModule.registerSchemesAsPrivileged([
   {
     scheme: ASSET_PROTOCOL,
     privileges: {
