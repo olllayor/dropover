@@ -23,13 +23,15 @@ export class PreferencesWindow {
     }
 
     this.window = new BrowserWindow({
-      width: 860,
-      height: 720,
-      minWidth: 760,
-      minHeight: 640,
+      width: 780,
+      height: 640,
+      minWidth: 680,
+      minHeight: 520,
       show: false,
       titleBarStyle: 'hiddenInset',
-      backgroundColor: '#171516',
+      vibrancy: 'sidebar',
+      visualEffectState: 'active',
+      backgroundColor: '#00000000',
       webPreferences: {
         preload: resolvePreloadPath(),
         contextIsolation: true,

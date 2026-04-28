@@ -76,31 +76,28 @@ button {
 
 .shelf-panel {
   position: relative;
-  width: min(212px, 100%);
-  min-height: min(244px, calc(100vh - 20px));
+  width: min(240px, 100%);
+  min-height: min(286px, calc(100vh - 20px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 8px;
-  padding: 10px;
-  border-radius: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  padding: 12px;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background:
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.08), transparent 52%),
-    linear-gradient(180deg, rgba(38, 38, 40, 0.96), rgba(22, 22, 24, 0.98));
+    linear-gradient(180deg, rgba(32, 32, 34, 0.98), rgba(18, 18, 20, 0.99));
   box-shadow:
-    0 18px 36px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(24px) saturate(1.04);
+    0 28px 56px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   -webkit-app-region: no-drag;
 }
 
 .shelf-panel.is-accepting-drop {
-  border-color: rgba(92, 156, 255, 0.36);
+  border-color: rgba(92, 156, 255, 0.32);
   box-shadow:
-    0 20px 42px rgba(0, 0, 0, 0.38),
-    0 0 0 1px rgba(92, 156, 255, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    0 28px 56px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(92, 156, 255, 0.18);
 }
 
 .shelf-panel.is-exporting .chrome-button-menu {
@@ -118,22 +115,12 @@ button {
 }
 
 .shelf-topbar {
-  min-height: 30px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   -webkit-app-region: drag;
   cursor: move;
-}
-
-.shelf-title-group {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.shelf-handle {
-  width: 32px;
-  height: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
 }
 
 .chrome-button,
@@ -164,28 +151,30 @@ button {
 }
 
 .chrome-button {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: 999px;
   display: grid;
   place-items: center;
   font-size: 1rem;
   line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .chrome-button svg {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
   fill: currentColor;
 }
 
 .chrome-button-close {
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .chrome-button-menu {
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .drop-surface,
@@ -201,7 +190,7 @@ button {
   position: relative;
   display: grid;
   align-items: center;
-  min-height: 170px;
+  min-height: 198px;
   padding: 4px 2px 2px;
   border-radius: 14px;
   transition:
@@ -211,12 +200,12 @@ button {
 }
 
 .drop-surface.is-empty {
-  min-height: 146px;
+  min-height: 168px;
 }
 
 .drop-surface.is-accepting {
-  background: linear-gradient(180deg, rgba(34, 84, 161, 0.18), rgba(18, 35, 62, 0.08));
-  box-shadow: inset 0 0 0 1px rgba(96, 152, 255, 0.24);
+  background: rgba(24, 60, 120, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(96, 152, 255, 0.18);
 }
 
 .surface-title,
@@ -285,20 +274,20 @@ button {
 }
 
 .hero-stage.is-single {
-  min-height: 104px;
+  min-height: 120px;
 }
 
 .hero-stage.is-collage {
-  min-height: 124px;
+  min-height: 142px;
 }
 
 .hero-stage.is-stack {
-  min-height: 110px;
+  min-height: 128px;
 }
 
 .hero-artwork {
-  width: 84px;
-  height: 84px;
+  width: 96px;
+  height: 96px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -336,16 +325,16 @@ button {
 
 .hero-deck {
   position: relative;
-  width: 110px;
-  height: 102px;
+  width: 128px;
+  height: 120px;
   display: grid;
   place-items: center;
 }
 
 .hero-deck-shadow {
   position: absolute;
-  width: 82px;
-  height: 82px;
+  width: 94px;
+  height: 94px;
   border-radius: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.07);
@@ -353,19 +342,19 @@ button {
 }
 
 .hero-deck-shadow-1 {
-  transform: translateX(-14px) translateY(-2px) rotate(-8deg);
+  transform: translateX(-16px) translateY(-2px) rotate(-8deg);
   opacity: 0.82;
 }
 
 .hero-deck-shadow-2 {
-  transform: translateX(14px) translateY(-1px) rotate(8deg);
+  transform: translateX(16px) translateY(-1px) rotate(8deg);
   opacity: 0.6;
 }
 
 .hero-collage {
   position: relative;
-  width: 124px;
-  height: 110px;
+  width: 140px;
+  height: 128px;
   display: grid;
   place-items: center;
   transition:
@@ -376,17 +365,17 @@ button {
 
 .hero-stack-card {
   position: absolute;
-  width: 72px;
-  height: 92px;
+  width: 84px;
+  height: 108px;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   background: linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(239, 239, 240, 0.94));
   box-shadow:
-    0 12px 20px rgba(0, 0, 0, 0.18),
-    0 0 0 6px rgba(255, 255, 255, 0.92);
+    0 14px 24px rgba(0, 0, 0, 0.20),
+    0 0 0 7px rgba(255, 255, 255, 0.94);
   transform-origin: center;
 }
 
@@ -396,12 +385,12 @@ button {
 }
 
 .hero-stack-card-back-left {
-  transform: translateX(-16px) translateY(2px) rotate(-9deg);
+  transform: translateX(-18px) translateY(2px) rotate(-8deg);
   z-index: 2;
 }
 
 .hero-stack-card-back-right {
-  transform: translateX(16px) translateY(2px) rotate(8deg);
+  transform: translateX(18px) translateY(2px) rotate(7deg);
   z-index: 1;
 }
 
@@ -419,58 +408,49 @@ button {
   color: rgba(66, 66, 72, 0.92);
 }
 
-.hero-chip-row,
-.hero-status-row {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-}
-
-.hero-chip {
-  max-width: 100%;
+.hero-count-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 0.42rem 0.68rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.hero-chip span:first-child {
-  max-width: 134px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.meta-chip,
-.footer-note,
-.settings-state-pill {
-  padding: 0.3rem 0.54rem;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink-soft);
-  font-size: 0.72rem;
-}
-
-.meta-chip-prominent {
-  padding: 0.42rem 0.72rem;
-  border-color: rgba(255, 255, 255, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.07));
-  color: rgba(255, 255, 255, 0.94);
-  font-size: 0.82rem;
-  font-weight: 500;
-}
-
-.hero-count-pill {
-  min-width: 86px;
   justify-content: center;
-  text-align: center;
+  gap: 6px;
+  padding: 0.44rem 0.82rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease,
+    opacity 160ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.hero-count-button:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.hero-count-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.hero-count-button:disabled {
+  cursor: default;
+  opacity: 0.50;
+}
+
+.hero-count-button svg {
+  width: 11px;
+  height: 11px;
+  opacity: 0.65;
+}
+
+.hero-count-button.is-exporting {
+  opacity: 0.45;
 }
 
 .hero-artwork.is-exporting,
@@ -494,10 +474,6 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-.hero-count-pill.is-exporting {
-  border-color: rgba(255, 255, 255, 0.22);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
-}
 
 .overflow-menu {
   position: absolute;

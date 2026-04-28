@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import { IPC_CHANNELS, type DropoverAPI, type StateListener } from '@shared/ipc'
+import { IPC_CHANNELS, type LedgeAPI, type StateListener } from '@shared/ipc'
 import {
   appStateSchema,
   createShelfInputSchema,
@@ -10,7 +10,7 @@ import {
   shelfRecordSchema
 } from '@shared/schema'
 
-const api: DropoverAPI = {
+const api: LedgeAPI = {
   async getState() {
     return appStateSchema.parse(await ipcRenderer.invoke(IPC_CHANNELS.getState))
   },
@@ -77,6 +77,9 @@ const api: DropoverAPI = {
   async shareShelfItems(itemIds) {
     return ipcRenderer.invoke(IPC_CHANNELS.shareShelfItems, itemIds)
   },
+  async showItemContextMenu(itemId) {
+    return ipcRenderer.invoke(IPC_CHANNELS.showItemContextMenu, itemId)
+  },
   getFilePath(file) {
     try {
       return webUtils.getPathForFile(file)
@@ -95,4 +98,4 @@ const api: DropoverAPI = {
   }
 }
 
-contextBridge.exposeInMainWorld('dropover', api)
+contextBridge.exposeInMainWorld('ledge', api)

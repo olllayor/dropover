@@ -1,6 +1,6 @@
 import { PreferencesView } from './components/PreferencesView'
 import { ShelfView } from './components/ShelfView'
-import { useDropoverState } from './hooks/useDropoverState'
+import { useDropoverState } from './hooks/useLedgeState'
 
 export function App() {
   const { state, error } = useDropoverState()
