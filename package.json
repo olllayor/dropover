@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.11.1",
   "description": "Ledge is a macOS-only shelf utility built with Electron and Swift.",
-  "main": "out/main/index.js",
+  "main": "out/main/index.cjs",
   "scripts": {
     "dev": "pnpm brand:build && pnpm native:build && electron-vite dev",
     "build": "pnpm brand:build && pnpm native:build && electron-vite build",

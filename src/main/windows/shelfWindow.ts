@@ -15,8 +15,8 @@ export class ShelfWindow {
     }
 
     this.window = new BrowserWindow({
-      width: 252,
-      height: 318,
+      width: 280,
+      height: 360,
       show: false,
       frame: false,
       transparent: true,
@@ -56,9 +56,11 @@ export class ShelfWindow {
     return this.window
   }
 
-  async showNear(point: { x: number; y: number }, inactive = false): Promise<void> {
+  async showNear(point: { x: number; y: number }, inactive = false, sizeOverride?: { width: number; height: number }): Promise<void> {
     const window = await this.ensure()
-    const bounds = this.manualBounds ?? computeBounds(point, window.getBounds().width, window.getBounds().height)
+    const width = sizeOverride?.width ?? window.getBounds().width
+    const height = sizeOverride?.height ?? window.getBounds().height
+    const bounds = this.manualBounds ?? computeBounds(point, width, height)
     this.withProgrammaticMove(() => {
       window.setBounds(bounds, false)
     })

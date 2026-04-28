@@ -1,11 +1,11 @@
 /// <reference types="vite/client" />
 
-import type { DropoverAPI } from '@shared/ipc'
+import type { LedgeAPI } from '@shared/ipc';
 
 declare global {
   interface Window {
-    dropover: DropoverAPI
+    ledge: LedgeAPI;
   }
 }
 
-export {}
+export {};

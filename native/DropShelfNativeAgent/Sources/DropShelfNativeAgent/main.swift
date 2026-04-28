@@ -26,7 +26,11 @@ final class NativeAgent {
     }
 
     private func readLoop() {
-        while let line = readLine(), !line.isEmpty {
+        while let line = readLine() {
+            if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                continue
+            }
+
             handle(line: line)
         }
     }

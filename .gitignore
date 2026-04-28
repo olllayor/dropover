@@ -3,6 +3,8 @@ node_modules/
 dist/
 out/
 native/bin/
+native/DropShelfNativeAgent/.build/
+native/DropShelfNativeAgent/.swiftpm/
 coverage/
 .env
 .env.*
