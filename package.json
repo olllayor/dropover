@@ -37,7 +37,6 @@
     "vitest": "4.1.2"
   },
   "build": {
-    "publish": "onTagOrDraft",
     "appId": "com.ollayor.ledge",
     "productName": "Ledge",
     "executableName": "Ledge",
