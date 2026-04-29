@@ -203,24 +203,6 @@ export function ShelfView({ state }: ShelfViewProps) {
     await pushPayloads(payloads);
   }
 
-  async function moveItem(itemId: string, direction: -1 | 1) {
-    if (!liveShelf) {
-      return;
-    }
-
-    const currentItems = [...liveShelf.items];
-    const index = currentItems.findIndex((item) => item.id === itemId);
-    const targetIndex = index + direction;
-    if (index === -1 || targetIndex < 0 || targetIndex >= currentItems.length) {
-      return;
-    }
-
-    const next = [...currentItems];
-    const [entry] = next.splice(index, 1);
-    next.splice(targetIndex, 0, entry);
-    await window.ledge.reorderItems(next.map((item) => item.id));
-  }
-
   async function openOverflowMenu() {
     if (!liveShelf) {
       return;
@@ -614,32 +596,6 @@ function heroStackClassName(index: number, count: number): string {
   }
 
   return index === 1 ? 'hero-stack-card-back-left' : 'hero-stack-card-back-right';
-}
-
-function isActionableFileItem(
-  item: ShelfItemRecord,
-): item is Extract<ShelfItemRecord, { kind: 'file' | 'folder' | 'imageAsset' }> {
-  return item.kind === 'file' || item.kind === 'folder' || item.kind === 'imageAsset';
-}
-
-function itemKindLabel(item: ShelfItemRecord): string {
-  if (item.kind === 'imageAsset') {
-    return 'Image';
-  }
-
-  if (item.kind === 'folder') {
-    return 'Folder';
-  }
-
-  if (item.kind === 'file') {
-    return 'File';
-  }
-
-  if (item.kind === 'url') {
-    return 'Link';
-  }
-
-  return 'Text';
 }
 
 function isExternalTransfer(transfer: DataTransfer | null): boolean {
