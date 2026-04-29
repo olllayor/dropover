@@ -247,6 +247,51 @@ function registerIpc(): void {
     menu.popup({ window: shelfWindow.getBrowserWindow() ?? undefined });
     return true;
   });
+  ipcMain.handle(IPC_CHANNELS.showShelfContextMenu, async () => {
+    const items = liveShelfItems();
+    const template: Electron.MenuItemConstructorOptions[] = [];
+
+    if (items.length > 0) {
+      const primaryItem = items[0];
+      const missing = isFileBackedItem(primaryItem) && primaryItem.file.isMissing;
+
+      template.push(
+        { label: 'Quick Look', enabled: !missing, click: () => previewItem(primaryItem.id) },
+        { label: 'Reveal in Finder', enabled: !missing, click: () => revealItem(primaryItem.id) },
+        { label: 'Open', enabled: !missing, click: () => openItem(primaryItem.id) },
+        { label: 'Copy', click: () => copyItem(primaryItem.id) },
+        { label: 'Save', click: () => saveItem(primaryItem.id) },
+        { type: 'separator' },
+      );
+    }
+
+    template.push(
+      { label: 'Share All', enabled: items.length > 0, click: () => shareItems() },
+      { type: 'separator' },
+      {
+        label: 'Clear Shelf',
+        enabled: items.length > 0,
+        click: () => {
+          stateStore.clearLiveShelf();
+          broadcastState();
+        },
+      },
+      {
+        label: 'Close Shelf',
+        click: () => {
+          stateStore.closeShelf();
+          shelfWindow.resetPosition();
+          shelfWindow.hide();
+          broadcastState();
+        },
+      },
+    );
+
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: shelfWindow.getBrowserWindow() ?? undefined });
+    return true;
+  });
+
   ipcMain.on(IPC_CHANNELS.startItemDrag, (event, itemId: string) => {
     const paths = draggablePathsForItemIds([itemId]);
     console.info('[DragDebug][Main] startItemDrag request.', {

@@ -33,6 +33,7 @@ export const IPC_CHANNELS = {
   reorderItems: 'ledge:reorder-items',
   shareShelfItems: 'ledge:share-shelf-items',
   showItemContextMenu: 'ledge:show-item-context-menu',
+  showShelfContextMenu: 'ledge:show-shelf-context-menu',
   stateUpdated: 'ledge:state-updated',
 } as const;
 
@@ -63,6 +64,7 @@ export interface LedgeAPI {
   reorderItems(itemIds: string[]): Promise<AppState>;
   shareShelfItems(itemIds?: string[]): Promise<boolean>;
   showItemContextMenu(itemId: string): Promise<boolean>;
+  showShelfContextMenu(): Promise<boolean>;
   getFilePath(file: File): string;
   subscribeState(listener: StateListener): () => void;
 }

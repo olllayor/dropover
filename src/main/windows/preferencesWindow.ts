@@ -1,25 +1,25 @@
-import { BrowserWindow } from 'electron'
-import type { AppState } from '@shared/schema'
-import { IPC_CHANNELS } from '@shared/ipc'
-import { loadRenderer } from './loadRenderer'
-import { resolvePreloadPath } from './preloadPath'
+import { BrowserWindow } from 'electron';
+import type { AppState } from '@shared/schema';
+import { IPC_CHANNELS } from '@shared/ipc';
+import { loadRenderer } from './loadRenderer';
+import { resolvePreloadPath } from './preloadPath';
 
 export class PreferencesWindow {
-  private window: BrowserWindow | null = null
+  private window: BrowserWindow | null = null;
 
   async show(): Promise<void> {
-    const window = await this.ensure()
-    window.show()
-    window.focus()
+    const window = await this.ensure();
+    window.show();
+    window.focus();
   }
 
   sendState(state: AppState): void {
-    this.window?.webContents.send(IPC_CHANNELS.stateUpdated, state)
+    this.window?.webContents.send(IPC_CHANNELS.stateUpdated, state);
   }
 
   private async ensure(): Promise<BrowserWindow> {
     if (this.window && !this.window.isDestroyed()) {
-      return this.window
+      return this.window;
     }
 
     this.window = new BrowserWindow({
@@ -28,6 +28,7 @@ export class PreferencesWindow {
       minWidth: 680,
       minHeight: 520,
       show: false,
+      transparent: true,
       titleBarStyle: 'hiddenInset',
       vibrancy: 'sidebar',
       visualEffectState: 'active',
@@ -35,13 +36,13 @@ export class PreferencesWindow {
       webPreferences: {
         preload: resolvePreloadPath(),
         contextIsolation: true,
-        sandbox: false
-      }
-    })
+        sandbox: false,
+      },
+    });
     this.window.on('closed', () => {
-      this.window = null
-    })
-    await loadRenderer(this.window, 'preferences')
-    return this.window
+      this.window = null;
+    });
+    await loadRenderer(this.window, 'preferences');
+    return this.window;
   }
 }

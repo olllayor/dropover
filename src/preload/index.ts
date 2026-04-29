@@ -90,6 +90,9 @@ const api: LedgeAPI = {
   async showItemContextMenu(itemId) {
     return ipcRenderer.invoke(IPC_CHANNELS.showItemContextMenu, itemId);
   },
+  async showShelfContextMenu() {
+    return ipcRenderer.invoke(IPC_CHANNELS.showShelfContextMenu);
+  },
   getFilePath(file) {
     try {
       return webUtils.getPathForFile(file);
