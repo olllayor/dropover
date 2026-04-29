@@ -10,6 +10,7 @@ import {
   IconGrid,
   IconList,
   IconFolder,
+  IconArrowUpRight,
 } from './Icons';
 
 interface ShelfViewProps {
@@ -24,6 +25,7 @@ export function ShelfView({ state }: ShelfViewProps) {
   const heroMode = getHeroMode(items);
   const [isImporting, setIsImporting] = useState(false);
   const [sessionMode, setSessionMode] = useState<SessionMode>('idle');
+  const [isHovering, setIsHovering] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const itemSheetRef = useRef<HTMLDivElement | null>(null);
@@ -248,6 +250,10 @@ export function ShelfView({ state }: ShelfViewProps) {
         if (isExporting) {
           setSessionMode('idle');
         }
+        setIsHovering(true);
+      }}
+      onPointerLeave={() => {
+        setIsHovering(false);
       }}
     >
       <div className="drag-handle" />
@@ -286,21 +292,40 @@ export function ShelfView({ state }: ShelfViewProps) {
                 <p className="surface-title compact">Drop files here</p>
               </div>
             ) : primaryItem ? (
-              <HeroItem
-                items={items}
-                item={primaryItem}
-                heroMode={heroMode}
-                isImporting={isImporting}
-                isExporting={isExporting}
-                dragLocked={isMenuOpen || isItemListOpen}
-                onExportStart={() => {
-                  setSessionMode('exporting');
-                }}
-                onExportEnd={() => {
-                  setSessionMode((current) => (current === 'exporting' ? 'idle' : current));
-                }}
-                onOpenItemSheet={openItemSheet}
-              />
+              <div className="hero-wrapper">
+                <HeroItem
+                  items={items}
+                  item={primaryItem}
+                  heroMode={heroMode}
+                  isImporting={isImporting}
+                  isExporting={isExporting}
+                  dragLocked={isMenuOpen || isItemListOpen}
+                  onExportStart={() => {
+                    setSessionMode('exporting');
+                  }}
+                  onExportEnd={() => {
+                    setSessionMode((current) => (current === 'exporting' ? 'idle' : current));
+                  }}
+                  onOpenItemSheet={openItemSheet}
+                />
+                {isHovering && !isExporting && !isImporting && itemCount > 0 && (
+                  <button
+                    className="drag-button"
+                    onClick={() => {
+                      const exportable = getExportableItems(items);
+                      if (exportable.length === 1) {
+                        window.ledge.startItemDrag(exportable[0]!.id);
+                      } else if (exportable.length > 1) {
+                        window.ledge.startItemsDrag(exportable.map((i) => i.id));
+                      }
+                      window.ledge.clearShelf();
+                    }}
+                    aria-label="Drag items out"
+                  >
+                    <IconArrowUpRight />
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="empty-state compact">
                 <p className="surface-title compact">Drop files here</p>

@@ -108,8 +108,8 @@ button {
   min-height: 100vh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 18px 12px 12px; /* Extra top padding for the drag handle */
+  gap: 6px;
+  padding: 14px 10px 10px; /* Extra top padding for the drag handle */
   background: transparent;
   overflow: hidden;
   -webkit-app-region: no-drag;
@@ -227,7 +227,7 @@ button {
   position: relative;
   display: grid;
   align-items: center;
-  min-height: 198px;
+  min-height: 160px;
   padding: 4px 2px 2px;
   border-radius: 14px;
   transition:
@@ -283,7 +283,14 @@ button {
 .hero-item {
   display: grid;
   justify-items: center;
-  gap: 9px;
+  gap: 6px;
+}
+
+.hero-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .hero-item.is-draggable {
@@ -313,24 +320,24 @@ button {
 }
 
 .hero-stage.is-single {
-  min-height: 120px;
+  min-height: 80px;
 }
 
 .hero-stage.is-collage {
-  min-height: 142px;
+  min-height: 100px;
 }
 
 .hero-stage.is-stack {
-  min-height: 128px;
+  min-height: 88px;
 }
 
 .hero-artwork {
-  width: 96px;
-  height: 96px;
+  width: 64px;
+  height: 64px;
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 18px;
+  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--surface-strong);
   box-shadow:
@@ -362,17 +369,17 @@ button {
 
 .hero-deck {
   position: relative;
-  width: 128px;
-  height: 120px;
+  width: 96px;
+  height: 88px;
   display: grid;
   place-items: center;
 }
 
 .hero-deck-shadow {
   position: absolute;
-  width: 94px;
-  height: 94px;
-  border-radius: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--surface);
   box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18);
@@ -449,13 +456,13 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0.44rem 0.82rem;
+  gap: 4px;
+  padding: 0.32rem 0.62rem;
   border-radius: 999px;
   border: 1px solid var(--line);
   background: var(--surface);
   color: var(--ink-soft);
-  font-size: 0.78rem;
+  font-size: 0.7rem;
   font-weight: 500;
   cursor: pointer;
   transition:
@@ -488,6 +495,43 @@ button {
 
 .hero-count-button.is-exporting {
   opacity: 0.45;
+}
+
+.drag-button {
+  position: absolute;
+  top: 50%;
+  right: -36px;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.drag-button:hover {
+  background: var(--surface-strong);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.drag-button:active {
+  cursor: grabbing;
+  transform: translateY(-50%) scale(0.95);
+}
+
+.drag-button svg {
+  width: 14px;
+  height: 14px;
 }
 
 .hero-artwork.is-exporting,

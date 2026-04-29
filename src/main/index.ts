@@ -294,14 +294,8 @@ function registerIpc(): void {
 
   ipcMain.on(IPC_CHANNELS.startItemDrag, (event, itemId: string) => {
     const paths = draggablePathsForItemIds([itemId]);
-    console.info('[DragDebug][Main] startItemDrag request.', {
-      itemId,
-      pathCount: paths.length,
-      firstPath: paths[0] ?? null,
-    });
 
     if (paths.length === 0) {
-      console.warn('[Drag] No draggable paths found for item:', itemId);
       event.returnValue = false;
       return;
     }
@@ -309,28 +303,14 @@ function registerIpc(): void {
     try {
       startNativeDrag(event.sender, paths);
       event.returnValue = true;
-      console.info('[DragDebug][Main] startItemDrag succeeded.', {
-        itemId,
-        pathCount: paths.length,
-      });
-    } catch (error) {
-      console.error('[DragDebug][Main] startItemDrag failed.', {
-        itemId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } catch {
       event.returnValue = false;
     }
   });
   ipcMain.on(IPC_CHANNELS.startItemsDrag, (event, itemIds: string[]) => {
     const paths = draggablePathsForItemIds(itemIds);
-    console.info('[DragDebug][Main] startItemsDrag request.', {
-      itemIds,
-      pathCount: paths.length,
-      pathsPreview: paths.slice(0, 3),
-    });
 
     if (paths.length === 0) {
-      console.warn('[Drag] No draggable paths found for items:', itemIds);
       event.returnValue = false;
       return;
     }
@@ -338,15 +318,7 @@ function registerIpc(): void {
     try {
       startNativeDrag(event.sender, paths);
       event.returnValue = true;
-      console.info('[DragDebug][Main] startItemsDrag succeeded.', {
-        itemCount: itemIds.length,
-        pathCount: paths.length,
-      });
-    } catch (error) {
-      console.error('[DragDebug][Main] startItemsDrag failed.', {
-        itemIds,
-        error: error instanceof Error ? error.message : String(error),
-      });
+    } catch {
       event.returnValue = false;
     }
   });
@@ -798,23 +770,10 @@ function draggablePathsForItemIds(itemIds: string[]): string[] {
 function startNativeDrag(webContents: Electron.WebContents, paths: string[]): void {
   const [firstPath] = paths;
   if (!firstPath) {
-    console.warn('[DragDebug][Main] startNativeDrag aborted: no firstPath.', {
-      pathCount: paths.length,
-    });
     return;
   }
 
-  console.info('[DragDebug][Main] startNativeDrag begin.', {
-    webContentsId: webContents.id,
-    pathCount: paths.length,
-    firstPath,
-  });
-
   const icon = dragIconImage(paths);
-  console.info('[DragDebug][Main] drag icon prepared.', {
-    isEmpty: icon.isEmpty(),
-    size: icon.getSize(),
-  });
 
   const dragPayload =
     paths.length > 1
@@ -828,15 +787,7 @@ function startNativeDrag(webContents: Electron.WebContents, paths: string[]): vo
           icon,
         };
 
-  console.info('[DragDebug][Main] invoking webContents.startDrag.', {
-    hasFilesArray: 'files' in dragPayload,
-    payloadFile: dragPayload.file,
-    payloadFileCount: paths.length,
-  });
-
   webContents.startDrag(dragPayload);
-
-  console.info('[DragDebug][Main] webContents.startDrag returned normally.');
 }
 
 function dragIconImage(paths: string[]) {
