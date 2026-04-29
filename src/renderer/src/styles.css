@@ -332,8 +332,8 @@ button {
 }
 
 .hero-artwork {
-  width: 64px;
-  height: 64px;
+  width: 88px;
+  height: 88px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -369,16 +369,16 @@ button {
 
 .hero-deck {
   position: relative;
-  width: 96px;
-  height: 88px;
+  width: 124px;
+  height: 112px;
   display: grid;
   place-items: center;
 }
 
 .hero-deck-shadow {
   position: absolute;
-  width: 64px;
-  height: 64px;
+  width: 88px;
+  height: 88px;
   border-radius: 16px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -397,8 +397,8 @@ button {
 
 .hero-collage {
   position: relative;
-  width: 140px;
-  height: 128px;
+  width: 176px;
+  height: 160px;
   display: grid;
   place-items: center;
   transition:
@@ -409,8 +409,8 @@ button {
 
 .hero-stack-card {
   position: absolute;
-  width: 84px;
-  height: 108px;
+  width: 104px;
+  height: 132px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -663,7 +663,7 @@ button {
 
 .item-sheet-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 16px;
   padding: 12px 0;
   overflow-y: auto;
@@ -679,8 +679,8 @@ button {
 }
 
 .item-grid-preview {
-  width: 64px;
-  height: 64px;
+  width: 88px;
+  height: 88px;
   border-radius: 12px;
   background: var(--surface-strong);
   display: grid;
@@ -696,8 +696,8 @@ button {
 }
 
 .item-grid-preview svg {
-  width: 32px;
-  height: 32px;
+  width: 42px;
+  height: 42px;
 }
 
 .item-grid-title {

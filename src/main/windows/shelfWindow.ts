@@ -15,8 +15,8 @@ export class ShelfWindow {
     }
 
     this.window = new BrowserWindow({
-      width: 240,
-      height: 300,
+      width: 320,
+      height: 380,
       show: false,
       frame: false,
       transparent: true,
