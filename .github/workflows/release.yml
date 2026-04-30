@@ -11,6 +11,9 @@ jobs:
     runs-on: macos-14
     permissions:
       contents: write
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
 
     steps:
       - name: Checkout
@@ -51,3 +54,4 @@ jobs:
           generate_release_notes: true
           files: |
             dist/mac-arm64/Ledge-*.dmg
+            dist/mac-arm64/Ledge-*.zip
