@@ -29,7 +29,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.2.0",
-    "electron": "31.0.0",
+    "electron": "34.0.0",
     "electron-builder": "24.13.3",
     "electron-vite": "5.0.0",
     "typescript": "6.0.2",
