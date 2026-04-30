@@ -78,8 +78,7 @@
     },
     "compression": "maximum",
     "asar": {
-      "smart": true,
-      "compression": "maximum"
+      "smartUnpack": true
     },
     "asarUnpack": [
       "**/native/DropShelfNativeAgent"
