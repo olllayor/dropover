@@ -82,7 +82,7 @@ jobs:
 
       - name: Build & Package
         if: steps.release-tag.outputs.should_release == 'true'
-        run: pnpm dist
+        run: pnpm dist:release
 
       - name: List artifacts
         if: steps.release-tag.outputs.should_release == 'true'
@@ -95,13 +95,6 @@ jobs:
           name: Ledge-dmg
           path: dist/*.dmg
 
-      - name: Upload ZIP
-        if: steps.release-tag.outputs.should_release == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: Ledge-zip
-          path: dist/*.zip
-
       - name: Create Release
         if: steps.release-tag.outputs.should_release == 'true'
         uses: softprops/action-gh-release@v2
@@ -111,4 +104,3 @@ jobs:
           generate_release_notes: true
           files: |
             dist/*.dmg
-            dist/*.zip

@@ -4,20 +4,20 @@ import { resolve } from 'node:path'
 
 const repoRoot = resolve(import.meta.dirname, '..')
 const buildDir = resolve(repoRoot, 'build')
-const svgPath = resolve(buildDir, 'icon.svg')
+const sourcePath = resolve(buildDir, 'icon-source.png')
 const pngPath = resolve(buildDir, 'icon.png')
 const iconsetDir = resolve(buildDir, 'icon.iconset')
 const icnsPath = resolve(buildDir, 'icon.icns')
 
-if (!existsSync(svgPath)) {
-  throw new Error(`Brand source is missing at ${svgPath}`)
+if (!existsSync(sourcePath)) {
+  throw new Error(`Brand source is missing at ${sourcePath}`)
 }
 
 mkdirSync(buildDir, { recursive: true })
 rmSync(iconsetDir, { recursive: true, force: true })
 mkdirSync(iconsetDir, { recursive: true })
 
-execFileSync('sips', ['-s', 'format', 'png', svgPath, '--out', pngPath], {
+execFileSync('sips', ['-s', 'format', 'png', '-z', '1024', '1024', sourcePath, '--out', pngPath], {
   cwd: repoRoot,
   stdio: 'inherit'
 })
