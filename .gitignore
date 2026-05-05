@@ -5,6 +5,8 @@ out/
 native/bin/
 native/DropShelfNativeAgent/.build/
 native/DropShelfNativeAgent/.swiftpm/
+native/LedgeNative/.build/
+native/LedgeNative/.swiftpm/
 coverage/
 .env
 .env.*
@@ -13,4 +15,6 @@ coverage/
 build/icon.icns
 build/icon.iconset/
 build/icon.png
-.codex/
+.codex/*
+!.codex/environments/
+!.codex/environments/environment.toml

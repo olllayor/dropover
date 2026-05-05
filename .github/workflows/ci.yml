@@ -34,5 +34,11 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Native Swift Test
+        run: swift run --package-path native/LedgeNative LedgeNative --self-test
+
       - name: Build
         run: pnpm build
+
+      - name: Native Swift Build
+        run: swift build --package-path native/LedgeNative
