@@ -8,11 +8,19 @@ const packageJson = JSON.parse(readFileSync(resolve(repoRoot, 'package.json'), '
 const productName = packageJson.build?.productName ?? packageJson.name
 const version = packageJson.version
 const arch = processArch === 'arm64' ? 'arm64' : 'x64'
+const supportedDmgFormats = new Set(['UDZO', 'UDBZ', 'ULFO'])
+const dmgFormat = (process.env.LEDGE_DMG_FORMAT ?? 'ULFO').toUpperCase()
 
 const distDir = resolve(repoRoot, 'dist')
 const appPath = join(distDir, `mac-${arch}`, `${productName}.app`)
 const stagingDir = join(distDir, 'dmg-staging')
 const dmgPath = join(distDir, `${productName}-${version}-${arch}.dmg`)
+
+if (!supportedDmgFormats.has(dmgFormat)) {
+  throw new Error(
+    `Unsupported LEDGE_DMG_FORMAT "${dmgFormat}". Expected one of: ${[...supportedDmgFormats].join(', ')}`
+  )
+}
 
 if (!existsSync(appPath)) {
   throw new Error(`Unable to find packaged app at ${appPath}`)
@@ -35,7 +43,9 @@ execFileSync(
     stagingDir,
     '-ov',
     '-format',
-    'UDZO',
+    // ULFO is the default because it keeps modern macOS installs fast while still shrinking
+    // the GitHub asset. UDBZ is smaller but slower to decompress; UDZO is the fallback.
+    dmgFormat,
     dmgPath
   ],
   {
